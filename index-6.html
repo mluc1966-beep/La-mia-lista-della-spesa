@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Lista di Casa</title>
+<style>
+  :root {
+    --bg: #F5F7F9;
+    --text: #24313D;
+    --text-muted: #7C8B98;
+    --border: #D8E2E9;
+    --blue-deep: #2C4A6E;
+    --blue-mid: #4C7CA6;
+    --blue-pale: #E7F0F7;
+    --green-deep: #3B6D11;
+    --green-pale: #E8F3DC;
+    --green-light-pale: #EFF6E6;
+    --green-light-deep: #5A8A2E;
+    --beige-deep: #8A6B3A;
+    --beige-pale: #F3ECDD;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .app { width: 100%; max-width: 420px; min-height: 100vh; background: white; }
+  header {
+    background: var(--blue-deep);
+    color: white;
+    padding: 1.2rem 1.25rem;
+  }
+  header h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 20px;
+    margin: 0;
+    font-weight: normal;
+  }
+  main { padding: 1.25rem; }
+
+  /* PIN */
+  .pin-box { text-align: center; padding-top: 3rem; }
+  .pin-box input {
+    font-size: 22px;
+    letter-spacing: 6px;
+    text-align: center;
+    width: 160px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .setup, .status {
+    background: var(--blue-pale);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-size: 14px;
+  }
+  .setup input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    margin-top: 8px;
+    margin-bottom: 10px;
+  }
+  button {
+    background: var(--blue-mid);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--blue-mid); border: 1px solid var(--blue-mid); }
+
+  /* Tessere liste */
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .tile {
+    border-radius: 12px;
+    padding: 0.9rem;
+    border: 2px solid transparent;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tile .emoji { font-size: 20px; }
+  .tile .name { font-size: 13px; margin: 6px 0 0; }
+  .tile .count { font-family: Georgia, serif; font-size: 20px; font-weight: bold; margin: 2px 0 0; }
+  .tile.verduriere { background: var(--green-pale); color: var(--green-deep); }
+  .tile.supermercato { background: var(--beige-pale); color: var(--beige-deep); }
+  .tile.vivaio { background: var(--green-light-pale); color: var(--green-light-deep); }
+  .tile.pescheria { background: var(--blue-pale); color: var(--blue-deep); }
+  .tile.active { border-color: currentColor; }
+
+  .list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .list-title { font-family: Georgia, serif; font-style: italic; font-size: 18px; margin: 0; }
+  select.sort-select { font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
+
+  .cat-header { font-size: 11px; color: var(--text-muted); margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #FAFBFC;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+  }
+  .item.done { background: #F0F0F0; opacity: 0.75; }
+  .item .name { flex: 1; font-size: 14px; }
+  .item.done .name { text-decoration: line-through; color: var(--text-muted); }
+  .item input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; }
+  .qty-stepper { display: flex; align-items: center; gap: 4px; }
+  .qty-stepper button {
+    width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qty-stepper .qty-val { font-size: 13px; min-width: 16px; text-align: center; }
+  .cat-tag {
+    font-size: 11px; padding: 2px 6px; border-radius: 999px; background: var(--blue-pale);
+    color: var(--blue-deep); border: none; cursor: pointer; flex-shrink: 0;
+  }
+  .restore-btn { padding: 3px 8px; font-size: 11px; height: auto; }
+
+  .add-row { display: flex; gap: 8px; margin-top: 1rem; }
+  .add-row input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+
+  .error { color: #B3312C; font-size: 13px; margin-top: 8px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header><h1>La Lista di Casa</h1></header>
+  <main>
+
+    <!-- SCHERMATA PIN -->
+    <div class="pin-box" id="pin-box">
+      <p style="color:var(--text-muted); font-size:14px;">Inserisci il PIN</p>
+      <input type="password" id="pin-input" inputmode="numeric" maxlength="6" onkeypress="if(event.key==='Enter') verificaPin()">
+      <p><button onclick="verificaPin()">Entra</button></p>
+      <p class="error hidden" id="pin-error">PIN errato.</p>
+    </div>
+
+    <!-- SETUP TOKEN -->
+    <div class="setup hidden" id="setup-box">
+      <div>Per collegarti a Home Assistant serve il token di accesso a lunga durata.</div>
+      <input type="password" id="token-input" placeholder="Incolla qui il token">
+      <button onclick="salvaToken()">Connetti</button>
+      <div class="error hidden" id="setup-error"></div>
+    </div>
+
+    <div class="status hidden" id="status-box">Connessione in corso...</div>
+
+    <!-- CONTENUTO PRINCIPALE -->
+    <div id="content" class="hidden">
+
+      <div class="tiles" id="tiles-container"></div>
+
+      <div class="list-header">
+        <p class="list-title" id="active-list-title">-</p>
+        <select class="sort-select" id="sort-select" onchange="ridisegna()">
+          <option value="categoria">Per categoria</option>
+          <option value="alfabetico">Alfabetico</option>
+        </select>
+      </div>
+
+      <div id="items-container"></div>
+
+      <div class="add-row">
+        <input type="text" id="new-item-input" placeholder="Aggiungi un prodotto" onkeypress="if(event.key==='Enter') aggiungiArticolo()">
+        <button onclick="aggiungiArticolo()">+</button>
+      </div>
+
+      <p style="margin-top:1.5rem;">
+        <button class="secondary" onclick="scollega()">Scollega token salvato</button>
+      </p>
+    </div>
+
+    <div style="margin-top:2rem; border-top:1px solid var(--border); padding-top:1rem;">
+      <p style="font-size:12px; color:var(--text-muted); margin:0 0 6px;">Debug (temporaneo)</p>
+      <div id="debug-log" style="background:#111; color:#7CFC9A; font-family:monospace; font-size:11px; padding:10px; border-radius:8px; max-height:200px; overflow-y:auto; white-space:pre-wrap;"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const HA_URL = "tepktbbit8utngvxc3enhyzgigkwehzm.ui.nabu.casa";
+const PIN_CORRETTO = "6912";
+
+const LISTE = [
+  { id: "todo.mainaluca_libero_it_verduriere", nome: "Verduriere", classe: "verduriere", emoji: "🥕" },
+  { id: "todo.mainaluca_libero_it_supermercato", nome: "Supermercato", classe: "supermercato", emoji: "🛒" },
+  { id: "todo.mainaluca_libero_it_vivaio", nome: "Vivaio", classe: "vivaio", emoji: "🌱" },
+  { id: "todo.mainaluca_libero_it_pescheria", nome: "Pescheria", classe: "pescheria", emoji: "🐟" }
+];
+
+const CATEGORIE = [
+  { id: "ortaggi", nome: "Ortaggi", emoji: "🥕" },
+  { id: "frutta", nome: "Frutta", emoji: "🍎" },
+  { id: "latticini", nome: "Latticini", emoji: "🥛" },
+  { id: "carne", nome: "Carne", emoji: "🥩" },
+  { id: "pesce", nome: "Pesce", emoji: "🐟" },
+  { id: "dispensa", nome: "Dispensa", emoji: "🥫" },
+  { id: "bevande", nome: "Bevande", emoji: "🥤" },
+  { id: "pulizia", nome: "Pulizia", emoji: "🧼" },
+  { id: "piante", nome: "Piante", emoji: "🌱" },
+  { id: "altro", nome: "Non categorizzato", emoji: "❔" }
+];
+
+let ws = null;
+let msgId = 1;
+const pending = {};
+const listsData = {}; // entityId -> { items: [...] }
+let activeListId = LISTE[0].id;
+let descrizioneSupportata = true; // diventa false se il primo tentativo fallisce
+
+// ── PIN ──────────────────────────────────────────────────────
+function verificaPin() {
+  const val = document.getElementById("pin-input").value.trim();
+  if (val === PIN_CORRETTO) {
+    document.getElementById("pin-box").classList.add("hidden");
+    avviaApp();
+  } else {
+    document.getElementById("pin-error").classList.remove("hidden");
+  }
+}
+
+function avviaApp() {
+  if (getToken()) {
+    connetti();
+  } else {
+    document.getElementById("setup-box").classList.remove("hidden");
+  }
+}
+
+// ── TOKEN ────────────────────────────────────────────────────
+function getToken() { return localStorage.getItem("ha_token"); }
+
+function salvaToken() {
+  const val = document.getElementById("token-input").value.trim();
+  if (!val) { mostraErroreSetup("Incolla il token prima di continuare."); return; }
+  localStorage.setItem("ha_token", val);
+  connetti();
+}
+
+function scollega() {
+  localStorage.removeItem("ha_token");
+  location.reload();
+}
+
+function mostraErroreSetup(msg) {
+  const el = document.getElementById("setup-error");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+function mostraStato(msg) {
+  const box = document.getElementById("status-box");
+  box.textContent = msg;
+  box.classList.remove("hidden");
+}
+function nascondiStato() { document.getElementById("status-box").classList.add("hidden"); }
+
+function log(msg) {
+  const box = document.getElementById("debug-log");
+  if (!box) return;
+  const time = new Date().toLocaleTimeString("it-IT");
+  box.textContent += "[" + time + "] " + msg + "\n";
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── WEBSOCKET ────────────────────────────────────────────────
+function connetti() {
+  const token = getToken();
+  if (!token) return;
+
+  document.getElementById("setup-box").classList.add("hidden");
+  mostraStato("Connessione in corso...");
+
+  log("Apertura WebSocket verso " + HA_URL);
+  ws = new WebSocket("wss://" + HA_URL + "/api/websocket");
+
+  ws.onopen = () => log("WebSocket aperto");
+  ws.onerror = () => {
+    log("ERRORE WebSocket");
+    mostraStato("");
+    document.getElementById("setup-box").classList.remove("hidden");
+    mostraErroreSetup("Errore di connessione. Controlla internet e riprova.");
+  };
+  ws.onclose = (e) => {
+    log("WebSocket chiuso. Codice: " + e.code);
+    mostraStato("Connessione chiusa. Ricarica la pagina.");
+  };
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === "auth_required") {
+      ws.send(JSON.stringify({ type: "auth", access_token: token }));
+      return;
+    }
+    if (msg.type === "auth_invalid") {
+      log("Token rifiutato");
+      localStorage.removeItem("ha_token");
+      mostraStato("");
+      document.getElementById("setup-box").classList.remove("hidden");
+      mostraErroreSetup("Token non valido o scaduto.");
+      return;
+    }
+    if (msg.type === "auth_ok") {
+      log("Autenticato");
+      nascondiStato();
+      document.getElementById("content").classList.remove("hidden");
+      disegnaTessere();
+      caricaTutteLeListe();
+      sottoscriviAggiornamenti();
+      return;
+    }
+    if (msg.type === "result" && pending[msg.id]) {
+      if (msg.success) { pending[msg.id].resolve(msg.result); }
+      else { log("Comando " + msg.id + " FALLITO: " + JSON.stringify(msg.error)); pending[msg.id].reject(msg.error); }
+      delete pending[msg.id];
+      return;
+    }
+    if (msg.type === "event") {
+      const entityId = msg.event && msg.event.data && msg.event.data.entity_id;
+      if (LISTE.some(l => l.id === entityId)) {
+        log("Aggiornamento per " + entityId);
+        caricaLista(entityId).then(() => {
+          disegnaTessere();
+          if (entityId === activeListId) ridisegna();
+        });
+      }
+    }
+  };
+}
+
+function inviaComando(payload) {
+  return new Promise((resolve, reject) => {
+    const id = msgId++;
+    pending[id] = { resolve, reject };
+    ws.send(JSON.stringify({ id, ...payload }));
+  });
+}
+
+function sottoscriviAggiornamenti() {
+  inviaComando({ type: "subscribe_events", event_type: "state_changed" })
+    .then(() => log("Sottoscrizione attiva"))
+    .catch((err) => log("Sottoscrizione fallita: " + JSON.stringify(err)));
+}
+
+// ── CARICAMENTO DATI ─────────────────────────────────────────
+function caricaTutteLeListe() {
+  Promise.all(LISTE.map(l => caricaLista(l.id))).then(() => {
+    disegnaTessere();
+    ridisegna();
+  });
+}
+
+function caricaLista(entityId) {
+  return inviaComando({ type: "todo/item/list", entity_id: entityId })
+    .then((result) => {
+      const items = (result.items || []).map(parseItem);
+      listsData[entityId] = { items };
+    })
+    .catch((err) => {
+      log("Errore caricando " + entityId + ": " + JSON.stringify(err));
+      listsData[entityId] = { items: [] };
+    });
+}
+
+// Estrae qty/categoria dal campo description (se presente), altrimenti default
+function parseItem(raw) {
+  let qty = 1, cat = "altro";
+  if (raw.description) {
+    try {
+      const meta = JSON.parse(raw.description);
+      if (meta.qty) qty = meta.qty;
+      if (meta.cat) cat = meta.cat;
+    } catch (e) { /* description non nel nostro formato, ignora */ }
+  }
+  return { ...raw, qty, cat };
+}
+
+// ── TESSERE ──────────────────────────────────────────────────
+function disegnaTessere() {
+  const container = document.getElementById("tiles-container");
+  container.innerHTML = "";
+  LISTE.forEach(l => {
+    const data = listsData[l.id];
+    const count = data ? data.items.filter(i => i.status !== "completed").length : "-";
+    const tile = document.createElement("button");
+    tile.className = "tile " + l.classe + (l.id === activeListId ? " active" : "");
+    tile.innerHTML = `<div class="emoji">${l.emoji}</div><div class="name">${l.nome}</div><div class="count">${count}</div>`;
+    tile.onclick = () => { activeListId = l.id; disegnaTessere(); ridisegna(); };
+    container.appendChild(tile);
+  });
+}
+
+// ── DISEGNO LISTA ATTIVA ─────────────────────────────────────
+function ridisegna() {
+  const lista = LISTE.find(l => l.id === activeListId);
+  document.getElementById("active-list-title").textContent = lista.nome;
+
+  const data = listsData[activeListId];
+  const container = document.getElementById("items-container");
+  container.innerHTML = "";
+
+  if (!data || data.items.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">Nessun articolo in lista.</p>';
+    return;
+  }
+
+  const daFare = data.items.filter(i => i.status !== "completed");
+  const fatti = data.items.filter(i => i.status === "completed");
+  const modo = document.getElementById("sort-select").value;
+
+  if (modo === "alfabetico") {
+    daFare.sort((a, b) => a.summary.localeCompare(b.summary));
+    daFare.forEach(item => container.appendChild(creaRiga(item)));
+  } else {
+    const gruppi = {};
+    daFare.forEach(item => {
+      if (!gruppi[item.cat]) gruppi[item.cat] = [];
+      gruppi[item.cat].push(item);
+    });
+    CATEGORIE.forEach(cat => {
+      if (gruppi[cat.id] && gruppi[cat.id].length) {
+        const h = document.createElement("p");
+        h.className = "cat-header";
+        h.textContent = cat.emoji + " " + cat.nome;
+        container.appendChild(h);
+        gruppi[cat.id].sort((a,b) => a.summary.localeCompare(b.summary));
+        gruppi[cat.id].forEach(item => container.appendChild(creaRiga(item)));
+      }
+    });
+  }
+
+  if (fatti.length > 0) {
+    const sep = document.createElement("p");
+    sep.className = "cat-header";
+    sep.textContent = "Comprato (" + fatti.length + ")";
+    container.appendChild(sep);
+    fatti.forEach(item => container.appendChild(creaRiga(item, true)));
+  }
+}
+
+function creaRiga(item, completato) {
+  const row = document.createElement("div");
+  row.className = "item" + (completato ? " done" : "");
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = !!completato;
+  checkbox.onchange = () => cambiaStato(item, checkbox.checked);
+
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = item.summary;
+
+  row.appendChild(checkbox);
+  row.appendChild(name);
+
+  if (!completato) {
+    const catInfo = CATEGORIE.find(c => c.id === item.cat) || CATEGORIE[CATEGORIE.length - 1];
+    const catTag = document.createElement("button");
+    catTag.className = "cat-tag";
+    catTag.textContent = catInfo.emoji;
+    catTag.onclick = () => cambiaCategoria(item);
+    row.appendChild(catTag);
+
+    const stepper = document.createElement("div");
+    stepper.className = "qty-stepper";
+    const meno = document.createElement("button");
+    meno.textContent = "−";
+    meno.onclick = () => cambiaQuantita(item, -1);
+    const val = document.createElement("span");
+    val.className = "qty-val";
+    val.textContent = item.qty;
+    const piu = document.createElement("button");
+    piu.textContent = "+";
+    piu.onclick = () => cambiaQuantita(item, 1);
+    stepper.appendChild(meno); stepper.appendChild(val); stepper.appendChild(piu);
+    row.appendChild(stepper);
+  } else {
+    const restoreBtn = document.createElement("button");
+    restoreBtn.className = "secondary restore-btn";
+    restoreBtn.textContent = "Ripristina";
+    restoreBtn.onclick = () => cambiaStato(item, false);
+    row.appendChild(restoreBtn);
+  }
+
+  return row;
+}
+
+// ── AZIONI ───────────────────────────────────────────────────
+function salvaMetaDati(item) {
+  if (!descrizioneSupportata) return Promise.resolve();
+  return inviaComando({
+    type: "call_service", domain: "todo", service: "update_item",
+    service_data: { item: item.uid, description: JSON.stringify({ qty: item.qty, cat: item.cat }) },
+    target: { entity_id: activeListId }
+  }).catch((err) => {
+    log("Il campo descrizione non sembra supportato da questa lista: " + JSON.stringify(err));
+    descrizioneSupportata = false;
+  });
+}
+
+function cambiaQuantita(item, delta) {
+  item.qty = Math.max(1, item.qty + delta);
+  ridisegna();
+  salvaMetaDati(item);
+}
+
+function cambiaCategoria(item) {
+  const idx = CATEGORIE.findIndex(c => c.id === item.cat);
+  item.cat = CATEGORIE[(idx + 1) % CATEGORIE.length].id;
+  ridisegna();
+  salvaMetaDati(item);
+}
+
+function cambiaStato(item, completato) {
+  inviaComando({
+    type: "call_service", domain: "todo", service: "update_item",
+    service_data: { item: item.uid, status: completato ? "completed" : "needs_action" },
+    target: { entity_id: activeListId }
+  }).then(() => caricaLista(activeListId)).then(() => { disegnaTessere(); ridisegna(); })
+    .catch((err) => log("Errore cambio stato: " + JSON.stringify(err)));
+}
+
+function aggiungiArticolo() {
+  const input = document.getElementById("new-item-input");
+  const testo = input.value.trim();
+  if (!testo) return;
+
+  inviaComando({
+    type: "call_service", domain: "todo", service: "add_item",
+    service_data: { item: testo },
+    target: { entity_id: activeListId }
+  }).then(() => {
+    input.value = "";
+    return caricaLista(activeListId);
+  }).then(() => { disegnaTessere(); ridisegna(); })
+    .catch((err) => log("Errore aggiunta: " + JSON.stringify(err)));
+}
+
+window.onload = () => {
+  // il PIN va inserito ad ogni apertura; il token invece resta salvato
+};
+</script>
+</body>
+</html>
