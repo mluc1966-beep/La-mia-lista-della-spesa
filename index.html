@@ -143,7 +143,13 @@
 </head>
 <body>
 <div class="app">
-  <header><h1>La Lista di Casa</h1></header>
+  <header style="display:flex; align-items:center; justify-content:space-between;" id="app-header">
+    <div style="display:flex; align-items:baseline; gap:8px;">
+      <h1>La Lista di Casa</h1>
+      <span id="version-tag" style="font-size:11px; opacity:0.7;"></span>
+    </div>
+    <button id="settings-btn" onclick="toggleImpostazioni()" style="background:transparent; border:1px solid rgba(255,255,255,0.5); padding:5px 10px; font-size:16px;" class="hidden">⚙</button>
+  </header>
   <main>
 
     <!-- SCHERMATA PIN -->
@@ -169,6 +175,25 @@
 
       <p id="conn-indicator" style="font-size:12px; margin:0 0 10px; padding:4px 10px; border-radius:999px; display:inline-block;"></p>
 
+    <!-- IMPOSTAZIONI -->
+    <div class="hidden" id="settings-panel" style="background:var(--blue-pale); border-radius:12px; padding:1rem; margin-bottom:1rem;">
+      <p style="font-weight:bold; margin:0 0 12px; font-size:15px;">Impostazioni</p>
+
+      <p style="font-size:13px; margin:0 0 6px;">Colore intestazione</p>
+      <input type="color" id="color-header" onchange="salvaImpostazioni()" style="width:100%; height:34px; margin-bottom:14px; border:none; border-radius:6px;">
+
+      <p style="font-size:13px; margin:0 0 6px;">Colore delle liste</p>
+      <div id="color-liste-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;"></div>
+
+      <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:14px;">
+        <input type="checkbox" id="chiedi-pin-sempre" onchange="salvaImpostazioni()">
+        Richiedi il PIN a ogni apertura
+      </label>
+
+      <button class="secondary" onclick="ripristinaColoriDefault()">Ripristina colori originali</button>
+    </div>
+
+    <div id="tabs-e-liste">
       <div class="tiles" id="tiles-container"></div>
 
       <div class="list-header">
@@ -202,6 +227,8 @@
 <script>
 const HA_URL = "tepktbbit8utngvxc3enhyzgigkwehzm.ui.nabu.casa";
 const PIN_CORRETTO = "6912";
+const APP_VERSION = "v0.3";
+const UNITA = ["pz", "kg", "g", "L", "ml"];
 
 const LISTE = [
   { id: "todo.mainaluca_libero_it_verduriere", nome: "Verduriere", classe: "verduriere", emoji: "🥕" },
@@ -209,6 +236,18 @@ const LISTE = [
   { id: "todo.mainaluca_libero_it_vivaio", nome: "Vivaio", classe: "vivaio", emoji: "🌱" },
   { id: "todo.mainaluca_libero_it_pescheria", nome: "Pescheria", classe: "pescheria", emoji: "🐟" }
 ];
+
+const DEFAULT_COLORS = {
+  header: "#2C4A6E",
+  liste: {
+    "todo.mainaluca_libero_it_verduriere": "#3B6D11",
+    "todo.mainaluca_libero_it_supermercato": "#8A6B3A",
+    "todo.mainaluca_libero_it_vivaio": "#5A8A2E",
+    "todo.mainaluca_libero_it_pescheria": "#2C4A6E"
+  }
+};
+
+let impostazioni = null; // caricate da localStorage all'avvio
 
 const CATEGORIE = [
   { id: "ortaggi", nome: "Ortaggi", emoji: "🥕" },
@@ -233,10 +272,84 @@ let tentativiRiconnessione = 0;
 let riconnessioneTimer = null;
 let chiusuraVolontaria = false;
 
+// ── IMPOSTAZIONI E COLORI ────────────────────────────────────
+function caricaImpostazioni() {
+  const salvate = localStorage.getItem("app_settings");
+  if (salvate) {
+    try { impostazioni = JSON.parse(salvate); } catch (e) { impostazioni = null; }
+  }
+  if (!impostazioni) {
+    impostazioni = { header: DEFAULT_COLORS.header, liste: { ...DEFAULT_COLORS.liste }, chiediPinSempre: false };
+  }
+  // eventuali nuove liste aggiunte in futuro ricevono comunque un colore di default
+  LISTE.forEach(l => { if (!impostazioni.liste[l.id]) impostazioni.liste[l.id] = DEFAULT_COLORS.liste[l.id] || "#4C7CA6"; });
+}
+
+function applicaColori() {
+  document.getElementById("app-header").style.background = impostazioni.header;
+  document.getElementById("color-header").value = impostazioni.header;
+
+  document.querySelectorAll(".tile").forEach(tile => {
+    const id = tile.dataset.entityId;
+    if (id && impostazioni.liste[id]) {
+      tile.style.background = impostazioni.liste[id] + "22"; // leggera trasparenza per lo sfondo
+      tile.style.color = impostazioni.liste[id];
+    }
+  });
+}
+
+function disegnaSelettoriColoreListe() {
+  const container = document.getElementById("color-liste-container");
+  container.innerHTML = "";
+  LISTE.forEach(l => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex; align-items:center; gap:8px;";
+    row.innerHTML = `
+      <span style="width:90px; font-size:13px;">${l.emoji} ${l.nome}</span>
+      <input type="color" data-list-id="${l.id}" value="${impostazioni.liste[l.id]}" style="flex:1; height:32px; border:none; border-radius:6px;">
+    `;
+    row.querySelector("input").onchange = (e) => {
+      impostazioni.liste[l.id] = e.target.value;
+      salvaImpostazioni();
+    };
+    container.appendChild(row);
+  });
+}
+
+function salvaImpostazioni() {
+  impostazioni.header = document.getElementById("color-header").value;
+  impostazioni.chiediPinSempre = document.getElementById("chiedi-pin-sempre").checked;
+  localStorage.setItem("app_settings", JSON.stringify(impostazioni));
+  applicaColori();
+}
+
+function ripristinaColoriDefault() {
+  impostazioni.header = DEFAULT_COLORS.header;
+  impostazioni.liste = { ...DEFAULT_COLORS.liste };
+  localStorage.setItem("app_settings", JSON.stringify(impostazioni));
+  disegnaSelettoriColoreListe();
+  document.getElementById("color-header").value = impostazioni.header;
+  applicaColori();
+}
+
+function toggleImpostazioni() {
+  const panel = document.getElementById("settings-panel");
+  const isHidden = panel.classList.contains("hidden");
+  if (isHidden) {
+    document.getElementById("chiedi-pin-sempre").checked = !!impostazioni.chiediPinSempre;
+    disegnaSelettoriColoreListe();
+  }
+  panel.classList.toggle("hidden");
+}
+
 // ── PIN ──────────────────────────────────────────────────────
 function verificaPin() {
   const val = document.getElementById("pin-input").value.trim();
   if (val === PIN_CORRETTO) {
+    if (!impostazioni.chiediPinSempre) {
+      sessionStorage.setItem("pin_ok_sessione", "1"); // ricordato solo per questa sessione del browser
+      localStorage.setItem("pin_ok_dispositivo", "1"); // ricordato stabilmente su questo dispositivo
+    }
     document.getElementById("pin-box").classList.add("hidden");
     avviaApp();
   } else {
@@ -244,7 +357,12 @@ function verificaPin() {
   }
 }
 
+function pinGiaRicordato() {
+  return !impostazioni.chiediPinSempre && localStorage.getItem("pin_ok_dispositivo") === "1";
+}
+
 function avviaApp() {
+  document.getElementById("settings-btn").classList.remove("hidden");
   mostraIndicatoreConnessione("offline");
   if (getToken()) {
     connetti();
@@ -441,17 +559,18 @@ function caricaLista(entityId) {
     });
 }
 
-// Estrae qty/categoria dal campo description (se presente), altrimenti default
+// Estrae qty/unità/categoria dal campo description (se presente), altrimenti default
 function parseItem(raw) {
-  let qty = 1, cat = "altro";
+  let qty = 1, cat = "altro", unit = "pz";
   if (raw.description) {
     try {
       const meta = JSON.parse(raw.description);
       if (meta.qty) qty = meta.qty;
       if (meta.cat) cat = meta.cat;
+      if (meta.unit) unit = meta.unit;
     } catch (e) { /* description non nel nostro formato, ignora */ }
   }
-  return { ...raw, qty, cat };
+  return { ...raw, qty, cat, unit };
 }
 
 // ── TESSERE ──────────────────────────────────────────────────
@@ -463,10 +582,12 @@ function disegnaTessere() {
     const count = data ? data.items.filter(i => i.status !== "completed").length : "-";
     const tile = document.createElement("button");
     tile.className = "tile " + l.classe + (l.id === activeListId ? " active" : "");
+    tile.dataset.entityId = l.id;
     tile.innerHTML = `<div class="emoji">${l.emoji}</div><div class="name">${l.nome}</div><div class="count">${count}</div>`;
     tile.onclick = () => { activeListId = l.id; disegnaTessere(); ridisegna(); };
     container.appendChild(tile);
   });
+  if (impostazioni) applicaColori();
 }
 
 // ── DISEGNO LISTA ATTIVA ─────────────────────────────────────
@@ -546,13 +667,34 @@ function creaRiga(item, completato) {
     const meno = document.createElement("button");
     meno.textContent = "−";
     meno.onclick = () => cambiaQuantita(item, -1);
-    const val = document.createElement("span");
+
+    const val = document.createElement("input");
+    val.type = "number";
+    val.min = "1";
+    val.step = "any";
+    val.value = item.qty;
     val.className = "qty-val";
-    val.textContent = item.qty;
+    val.style.cssText = "width:38px; border:1px solid var(--border); border-radius:4px; text-align:center; font-size:13px; padding:2px;";
+    val.onchange = () => {
+      const nuovo = parseFloat(val.value);
+      cambiaQuantita(item, 0, isNaN(nuovo) || nuovo <= 0 ? 1 : nuovo);
+    };
+
     const piu = document.createElement("button");
     piu.textContent = "+";
     piu.onclick = () => cambiaQuantita(item, 1);
-    stepper.appendChild(meno); stepper.appendChild(val); stepper.appendChild(piu);
+
+    const unitSelect = document.createElement("select");
+    unitSelect.style.cssText = "font-size:11px; border:1px solid var(--border); border-radius:4px; padding:2px;";
+    UNITA.forEach(u => {
+      const opt = document.createElement("option");
+      opt.value = u; opt.textContent = u;
+      if (u === item.unit) opt.selected = true;
+      unitSelect.appendChild(opt);
+    });
+    unitSelect.onchange = () => cambiaUnita(item, unitSelect.value);
+
+    stepper.appendChild(meno); stepper.appendChild(val); stepper.appendChild(piu); stepper.appendChild(unitSelect);
     row.appendChild(stepper);
   } else {
     const restoreBtn = document.createElement("button");
@@ -570,7 +712,7 @@ function salvaMetaDati(item) {
   if (!descrizioneSupportata) return Promise.resolve();
   return inviaComando({
     type: "call_service", domain: "todo", service: "update_item",
-    service_data: { item: item.uid, description: JSON.stringify({ qty: item.qty, cat: item.cat }) },
+    service_data: { item: item.uid, description: JSON.stringify({ qty: item.qty, cat: item.cat, unit: item.unit }) },
     target: { entity_id: activeListId }
   }).catch((err) => {
     if (err === "connessione non aperta" || err === "connessione chiusa") {
@@ -581,12 +723,23 @@ function salvaMetaDati(item) {
   });
 }
 
-function cambiaQuantita(item, delta) {
+// delta: +1/-1 per lo stepper. Se valoreDigitato è passato, sovrascrive direttamente la quantità (input da tastiera).
+function cambiaQuantita(item, delta, valoreDigitato) {
   const vecchioValore = item.qty;
-  item.qty = Math.max(1, item.qty + delta);
+  item.qty = valoreDigitato !== undefined ? valoreDigitato : Math.max(1, item.qty + delta);
   ridisegna();
   salvaMetaDati(item).catch(() => {
     item.qty = vecchioValore;
+    ridisegna();
+    alert("Non salvato: connessione assente. Riprova quando torna online.");
+  });
+}
+
+function cambiaUnita(item, nuovaUnita) {
+  const vecchiaUnita = item.unit;
+  item.unit = nuovaUnita;
+  salvaMetaDati(item).catch(() => {
+    item.unit = vecchiaUnita;
     ridisegna();
     alert("Non salvato: connessione assente. Riprova quando torna online.");
   });
@@ -630,7 +783,15 @@ function aggiungiArticolo() {
 }
 
 window.onload = () => {
-  // il PIN va inserito ad ogni apertura; il token invece resta salvato
+  document.getElementById("version-tag").textContent = APP_VERSION;
+  caricaImpostazioni();
+  applicaColori();
+
+  if (pinGiaRicordato()) {
+    document.getElementById("pin-box").classList.add("hidden");
+    avviaApp();
+  }
+  // altrimenti resta visibile la schermata PIN, già mostrata di default
 };
 </script>
 </body>
