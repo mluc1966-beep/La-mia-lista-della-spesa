@@ -157,6 +157,11 @@
       </p>
     </div>
 
+    <div style="margin-top:2rem; border-top:1px solid var(--border); padding-top:1rem;">
+      <p style="font-size:12px; color:var(--text-muted); margin:0 0 6px;">Debug (temporaneo)</p>
+      <div id="debug-log" style="background:#111; color:#7CFC9A; font-family:monospace; font-size:11px; padding:10px; border-radius:8px; max-height:200px; overflow-y:auto; white-space:pre-wrap;"></div>
+    </div>
+
   </main>
 </div>
 
@@ -203,6 +208,14 @@ function nascondiStato() {
   document.getElementById("status-box").classList.add("hidden");
 }
 
+function log(msg) {
+  const box = document.getElementById("debug-log");
+  if (!box) return;
+  const time = new Date().toLocaleTimeString("it-IT");
+  box.textContent += "[" + time + "] " + msg + "\n";
+  box.scrollTop = box.scrollHeight;
+}
+
 function connetti() {
   const token = getToken();
   if (!token) return;
@@ -210,28 +223,36 @@ function connetti() {
   document.getElementById("setup-box").classList.add("hidden");
   mostraStato("Connessione in corso...");
 
+  log("Apertura WebSocket verso " + HA_URL);
   ws = new WebSocket("wss://" + HA_URL + "/api/websocket");
 
-  ws.onopen = () => {};
+  ws.onopen = () => {
+    log("WebSocket aperto (onopen)");
+  };
 
-  ws.onerror = () => {
+  ws.onerror = (e) => {
+    log("ERRORE WebSocket (onerror)");
     mostraStato("");
     mostraErroreSetupEriapri("Errore di connessione. Controlla l'indirizzo Nabu Casa e la connessione internet.");
   };
 
-  ws.onclose = () => {
-    mostraStato("Connessione chiusa. Ricarica la pagina per riprovare.");
+  ws.onclose = (e) => {
+    log("WebSocket chiuso. Codice: " + e.code + " Motivo: " + (e.reason || "(nessuno)"));
+    mostraStato("Connessione chiusa (codice " + e.code + "). Ricarica la pagina per riprovare.");
   };
 
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
+    log("Ricevuto: " + msg.type + (msg.id ? " (id " + msg.id + ")" : ""));
 
     if (msg.type === "auth_required") {
       ws.send(JSON.stringify({ type: "auth", access_token: token }));
+      log("Inviata autenticazione");
       return;
     }
 
     if (msg.type === "auth_invalid") {
+      log("Token rifiutato da HA");
       mostraStato("");
       localStorage.removeItem("ha_token");
       document.getElementById("setup-box").classList.remove("hidden");
@@ -240,6 +261,7 @@ function connetti() {
     }
 
     if (msg.type === "auth_ok") {
+      log("Autenticazione riuscita");
       nascondiStato();
       document.getElementById("content").classList.remove("hidden");
       caricaArticoli();
@@ -249,8 +271,10 @@ function connetti() {
 
     if (msg.type === "result" && pending[msg.id]) {
       if (msg.success) {
+        log("Comando id " + msg.id + " riuscito");
         pending[msg.id].resolve(msg.result);
       } else {
+        log("Comando id " + msg.id + " FALLITO: " + JSON.stringify(msg.error));
         pending[msg.id].reject(msg.error);
       }
       delete pending[msg.id];
@@ -258,8 +282,11 @@ function connetti() {
     }
 
     if (msg.type === "event") {
-      const entityChanged = msg.event && msg.event.data && msg.event.data.entity_id === ENTITY_ID;
+      const entityId = msg.event && msg.event.data && msg.event.data.entity_id;
+      log("Evento state_changed ricevuto per: " + entityId);
+      const entityChanged = entityId === ENTITY_ID;
       if (entityChanged) {
+        log("Corrisponde alla lista Vivaio: ricarico");
         caricaArticoli();
       }
     }
@@ -275,20 +302,28 @@ function inviaComando(payload) {
   return new Promise((resolve, reject) => {
     const id = msgId++;
     pending[id] = { resolve, reject };
+    log("Invio comando id " + id + ": " + payload.type + (payload.service ? " (" + payload.domain + "." + payload.service + ")" : ""));
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      log("ATTENZIONE: WebSocket non aperto (stato " + (ws ? ws.readyState : "null") + "), il comando potrebbe non partire");
+    }
     ws.send(JSON.stringify({ id, ...payload }));
   });
 }
 
 function sottoscriviAggiornamenti() {
-  inviaComando({ type: "subscribe_events", event_type: "state_changed" }).catch(() => {});
+  inviaComando({ type: "subscribe_events", event_type: "state_changed" })
+    .then(() => log("Sottoscrizione eventi attiva"))
+    .catch((err) => log("Sottoscrizione eventi FALLITA: " + JSON.stringify(err)));
 }
 
 function caricaArticoli() {
   inviaComando({ type: "todo/item/list", entity_id: ENTITY_ID })
     .then((result) => {
+      log("Lista caricata: " + (result.items ? result.items.length : 0) + " articoli");
       disegnaArticoli(result.items || []);
     })
-    .catch(() => {
+    .catch((err) => {
+      log("Errore caricamento lista: " + JSON.stringify(err));
       mostraStato("Errore nel caricare la lista.");
     });
 }
@@ -343,7 +378,8 @@ function cambiaStato(item, completato) {
       status: completato ? "completed" : "needs_action"
     },
     target: { entity_id: ENTITY_ID }
-  }).then(() => caricaArticoli());
+  }).then(() => { log("Stato aggiornato, ricarico lista"); caricaArticoli(); })
+    .catch((err) => log("Errore aggiornamento stato: " + JSON.stringify(err)));
 }
 
 function aggiungiArticolo() {
@@ -351,6 +387,7 @@ function aggiungiArticolo() {
   const testo = input.value.trim();
   if (!testo) return;
 
+  log("Tentativo di aggiungere: " + testo);
   inviaComando({
     type: "call_service",
     domain: "todo",
@@ -358,9 +395,10 @@ function aggiungiArticolo() {
     service_data: { item: testo },
     target: { entity_id: ENTITY_ID }
   }).then(() => {
+    log("Articolo aggiunto, ricarico lista");
     input.value = "";
     caricaArticoli();
-  });
+  }).catch((err) => log("Errore aggiunta articolo: " + JSON.stringify(err)));
 }
 
 window.onload = () => {
