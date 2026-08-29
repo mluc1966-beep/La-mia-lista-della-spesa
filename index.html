@@ -167,6 +167,8 @@
     <!-- CONTENUTO PRINCIPALE -->
     <div id="content" class="hidden">
 
+      <p id="conn-indicator" style="font-size:12px; margin:0 0 10px; padding:4px 10px; border-radius:999px; display:inline-block;"></p>
+
       <div class="tiles" id="tiles-container"></div>
 
       <div class="list-header">
@@ -227,6 +229,9 @@ const pending = {};
 const listsData = {}; // entityId -> { items: [...] }
 let activeListId = LISTE[0].id;
 let descrizioneSupportata = true; // diventa false se il primo tentativo fallisce
+let tentativiRiconnessione = 0;
+let riconnessioneTimer = null;
+let chiusuraVolontaria = false;
 
 // ── PIN ──────────────────────────────────────────────────────
 function verificaPin() {
@@ -240,6 +245,7 @@ function verificaPin() {
 }
 
 function avviaApp() {
+  mostraIndicatoreConnessione("offline");
   if (getToken()) {
     connetti();
   } else {
@@ -283,27 +289,51 @@ function log(msg) {
   box.scrollTop = box.scrollHeight;
 }
 
+function mostraIndicatoreConnessione(stato) {
+  const el = document.getElementById("conn-indicator");
+  if (!el) return;
+  if (stato === "online") {
+    el.textContent = "● Connesso";
+    el.style.background = "#DEF3E2";
+    el.style.color = "#1F7A3D";
+  } else if (stato === "riconnessione") {
+    el.textContent = "● Riconnessione in corso...";
+    el.style.background = "#FBEFD8";
+    el.style.color = "#8A6B1F";
+  } else {
+    el.textContent = "● Non connesso";
+    el.style.background = "#F7DEDD";
+    el.style.color = "#B3312C";
+  }
+}
+
 // ── WEBSOCKET ────────────────────────────────────────────────
 function connetti() {
   const token = getToken();
   if (!token) return;
 
   document.getElementById("setup-box").classList.add("hidden");
-  mostraStato("Connessione in corso...");
+  if (tentativiRiconnessione === 0) mostraStato("Connessione in corso...");
 
-  log("Apertura WebSocket verso " + HA_URL);
+  log("Apertura WebSocket verso " + HA_URL + (tentativiRiconnessione > 0 ? " (tentativo " + tentativiRiconnessione + ")" : ""));
+  chiusuraVolontaria = false;
   ws = new WebSocket("wss://" + HA_URL + "/api/websocket");
 
   ws.onopen = () => log("WebSocket aperto");
-  ws.onerror = () => {
-    log("ERRORE WebSocket");
-    mostraStato("");
-    document.getElementById("setup-box").classList.remove("hidden");
-    mostraErroreSetup("Errore di connessione. Controlla internet e riprova.");
-  };
+
+  ws.onerror = () => log("ERRORE WebSocket");
+
   ws.onclose = (e) => {
     log("WebSocket chiuso. Codice: " + e.code);
-    mostraStato("Connessione chiusa. Ricarica la pagina.");
+    mostraIndicatoreConnessione("offline");
+    // rifiuta tutti i comandi rimasti in sospeso, così chi aspetta una risposta lo sa
+    Object.keys(pending).forEach(id => {
+      pending[id].reject("connessione chiusa");
+      delete pending[id];
+    });
+    if (!chiusuraVolontaria) {
+      pianificaRiconnessione();
+    }
   };
 
   ws.onmessage = (event) => {
@@ -323,6 +353,8 @@ function connetti() {
     }
     if (msg.type === "auth_ok") {
       log("Autenticato");
+      tentativiRiconnessione = 0;
+      mostraIndicatoreConnessione("online");
       nascondiStato();
       document.getElementById("content").classList.remove("hidden");
       disegnaTessere();
@@ -349,8 +381,34 @@ function connetti() {
   };
 }
 
+function pianificaRiconnessione() {
+  tentativiRiconnessione++;
+  mostraIndicatoreConnessione("riconnessione");
+  // attesa crescente: 2s, 4s, 8s... fino a un massimo di 30s tra un tentativo e l'altro
+  const attesa = Math.min(30000, 2000 * Math.pow(2, tentativiRiconnessione - 1));
+  log("Riprovo tra " + Math.round(attesa / 1000) + " secondi");
+  clearTimeout(riconnessioneTimer);
+  riconnessioneTimer = setTimeout(connetti, attesa);
+}
+
+// Quando il telefono torna in primo piano (es. si riapre l'app/scheda), se il
+// WebSocket risulta chiuso proviamo subito a riconnetterci invece di aspettare.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && ws && ws.readyState !== WebSocket.OPEN && getToken()) {
+    log("Pagina tornata visibile: verifico la connessione");
+    clearTimeout(riconnessioneTimer);
+    tentativiRiconnessione = 0;
+    connetti();
+  }
+});
+
 function inviaComando(payload) {
   return new Promise((resolve, reject) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      log("Comando NON inviato: connessione non aperta (" + payload.type + ")");
+      reject("connessione non aperta");
+      return;
+    }
     const id = msgId++;
     pending[id] = { resolve, reject };
     ws.send(JSON.stringify({ id, ...payload }));
@@ -515,22 +573,35 @@ function salvaMetaDati(item) {
     service_data: { item: item.uid, description: JSON.stringify({ qty: item.qty, cat: item.cat }) },
     target: { entity_id: activeListId }
   }).catch((err) => {
+    if (err === "connessione non aperta" || err === "connessione chiusa") {
+      throw err; // errore di connessione: deve far fallire visibilmente l'azione
+    }
     log("Il campo descrizione non sembra supportato da questa lista: " + JSON.stringify(err));
     descrizioneSupportata = false;
   });
 }
 
 function cambiaQuantita(item, delta) {
+  const vecchioValore = item.qty;
   item.qty = Math.max(1, item.qty + delta);
   ridisegna();
-  salvaMetaDati(item);
+  salvaMetaDati(item).catch(() => {
+    item.qty = vecchioValore;
+    ridisegna();
+    alert("Non salvato: connessione assente. Riprova quando torna online.");
+  });
 }
 
 function cambiaCategoria(item) {
+  const vecchiaCat = item.cat;
   const idx = CATEGORIE.findIndex(c => c.id === item.cat);
   item.cat = CATEGORIE[(idx + 1) % CATEGORIE.length].id;
   ridisegna();
-  salvaMetaDati(item);
+  salvaMetaDati(item).catch(() => {
+    item.cat = vecchiaCat;
+    ridisegna();
+    alert("Non salvato: connessione assente. Riprova quando torna online.");
+  });
 }
 
 function cambiaStato(item, completato) {
