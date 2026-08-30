@@ -1016,7 +1016,7 @@ function escAcq(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':
 // Override riga: tutto su una sola riga, con quantità compatta e scanner.
 function creaRiga(item, completato) {
   const row=document.createElement("div");row.className="item"+(completato?" done":"");
-  const checkbox=document.createElement("input");checkbox.type="checkbox";checkbox.checked=!!completato;checkbox.onchange=()=>cambiaStato(item,checkbox.checked);row.appendChild(checkbox);
+  const checkbox=document.createElement("input");checkbox.type="checkbox";checkbox.checked=!!completato;checkbox.onchange=()=>{ if(checkbox.checked) segnaCompratoManuale(item); else ripristinaComprato(item); };row.appendChild(checkbox);
   const name=document.createElement("span");name.className="name";name.textContent=item.summary;name.title=item.summary;row.appendChild(name);
   if(!completato){
     const cat=document.createElement("select");cat.className="cat-select";cat.title="Categoria";CATEGORIE.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.emoji+" "+c.nome;if(c.id===item.cat)o.selected=true;cat.appendChild(o)});cat.onchange=()=>cambiaCategoria(item,cat.value);row.appendChild(cat);
@@ -1024,18 +1024,74 @@ function creaRiga(item, completato) {
     const val=document.createElement("input");val.type="number";val.min="0.01";val.step="any";val.value=item.qty;val.setAttribute("aria-label","Quantità");val.onchange=()=>{const n=parseFloat(val.value);cambiaQuantita(item,0,isNaN(n)||n<=0?1:n)};
     const un=document.createElement("select");un.setAttribute("aria-label","Unità");UNITA.forEach(u=>{const o=document.createElement("option");o.value=u;o.textContent=u;if(u===item.unit)o.selected=true;un.appendChild(o)});un.onchange=()=>cambiaUnita(item,un.value);q.appendChild(val);q.appendChild(un);row.appendChild(q);
     const b=document.createElement("button");b.type="button";b.className="barcode-btn";b.textContent="▥";b.title="Comprato: scansiona barcode";b.setAttribute("aria-label","Scansiona barcode e segna comprato");b.onclick=()=>apriScanner(item);row.appendChild(b);
-  }else{const r=document.createElement("button");r.className="secondary restore-btn";r.textContent="Ripristina";r.onclick=()=>cambiaStato(item,false);row.appendChild(r)}
+  }else{const r=document.createElement("button");r.className="secondary restore-btn";r.textContent="Ripristina";r.onclick=()=>ripristinaComprato(item);row.appendChild(r)}
   return row;
 }
 
-// Spunta manuale = acquisto generico; scansione = acquisto specifico OFF.
-function cambiaStato(item, completato, acquistoSpecifico) {
-  let acquistoId=null;
-  if(completato) acquistoId=registraAcquisto(item,acquistoSpecifico?"barcode":"manuale",acquistoSpecifico||null);
-  else rimuoviUltimoAcquistoItem(item);
-  return inviaComando({type:"call_service",domain:"todo",service:"update_item",service_data:{item:item.uid,status:completato?"completed":"needs_action"},target:{entity_id:activeListId}})
-    .then(()=>caricaLista(activeListId)).then(()=>{disegnaTessere();ridisegna();renderAcquisti()})
-    .catch(err=>{if(acquistoId)annullaAcquisto(acquistoId);log("Errore cambio stato: "+JSON.stringify(err));ridisegna()});
+// ── STATO ACQUISTO ───────────────────────────────────────────
+// Home Assistant resta la fonte dello stato della lista. Lo storico viene
+// aggiornato solo DOPO che HA ha confermato la modifica, così lista e storico
+// non possono divergere in caso di connessione assente o comando fallito.
+function impostaStatoHA(item, completato, listId) {
+  const entityId = listId || activeListId;
+  return inviaComando({
+    type: "call_service",
+    domain: "todo",
+    service: "update_item",
+    service_data: { item: item.uid, status: completato ? "completed" : "needs_action" },
+    target: { entity_id: entityId }
+  }).then(() => caricaLista(entityId)).then(() => {
+    disegnaTessere();
+    if (entityId === activeListId) ridisegna();
+  });
+}
+
+function segnaCompratoManuale(item) {
+  const listId = activeListId;
+  return impostaStatoHA(item, true, listId)
+    .then(() => {
+      const oldActive = activeListId;
+      activeListId = listId;
+      registraAcquisto(item, "manuale", null);
+      activeListId = oldActive;
+      renderAcquisti();
+    })
+    .catch(err => {
+      log("Errore acquisto manuale: " + JSON.stringify(err));
+      ridisegna();
+    });
+}
+
+function segnaCompratoBarcode(item, food, listId) {
+  const entityId = listId || activeListId;
+  return impostaStatoHA(item, true, entityId)
+    .then(() => {
+      const oldActive = activeListId;
+      activeListId = entityId;
+      registraAcquisto(item, "barcode", food);
+      activeListId = oldActive;
+      renderAcquisti();
+    })
+    .catch(err => {
+      log("Errore acquisto barcode: " + JSON.stringify(err));
+      ridisegna();
+    });
+}
+
+function ripristinaComprato(item) {
+  const listId = activeListId;
+  return impostaStatoHA(item, false, listId)
+    .then(() => {
+      const oldActive = activeListId;
+      activeListId = listId;
+      rimuoviUltimoAcquistoItem(item);
+      activeListId = oldActive;
+      renderAcquisti();
+    })
+    .catch(err => {
+      log("Errore ripristino: " + JSON.stringify(err));
+      ridisegna();
+    });
 }
 
 function n(v){const x=Number(v);return Number.isFinite(x)?x:null}
@@ -1056,15 +1112,41 @@ function setScanStatus(t){const e=document.getElementById('scan-status');if(e)e.
 async function apriScanner(item){scannerItem=item;scannerListId=activeListId;scannerFood=null;document.getElementById('scan-title').textContent=item.summary;document.getElementById('scan-result').classList.add('hidden');document.getElementById('scan-result').innerHTML='';document.getElementById('scan-manual-code').value='';document.getElementById('barcode-overlay').classList.remove('hidden');await startScannerCamera()}
 async function startScannerCamera(){
   stopScannerCamera();setScanStatus("Inquadra il codice a barre della confezione.");
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setScanStatus("Fotocamera non disponibile: inserisci il barcode manualmente.");return}
+  if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){setScanStatus("La preview è aperta come file locale: usa «Scatta foto barcode» oppure inserisci il codice manualmente.");return}
   try{scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const v=document.getElementById('scan-video');v.srcObject=scannerStream;await v.play();
     if('BarcodeDetector' in window){const formats=await BarcodeDetector.getSupportedFormats();const wanted=['ean_13','ean_8','upc_a','upc_e','code_128'].filter(x=>formats.includes(x));const det=new BarcodeDetector(wanted.length?{formats:wanted}:undefined);scannerTimer=setInterval(async()=>{try{if(v.readyState<2)return;const codes=await det.detect(v);if(codes&&codes[0]&&codes[0].rawValue){clearInterval(scannerTimer);scannerTimer=null;cercaBarcode(codes[0].rawValue)}}catch(e){}},350)}else setScanStatus("Scanner automatico non supportato da questo browser: puoi inserire il codice manualmente.");
-  }catch(e){setScanStatus("Non riesco ad aprire la fotocamera: inserisci il barcode manualmente.")}
+  }catch(e){setScanStatus("Non riesco ad aprire la fotocamera live: usa «Scatta foto barcode» oppure inserisci il codice manualmente.")}
 }
+
+async function leggiBarcodeDaFoto(input){
+  const file=input && input.files && input.files[0];
+  if(!file)return;
+  setScanStatus("Analizzo la foto del codice a barre…");
+  try{
+    if(!('BarcodeDetector' in window)) throw new Error("Questo browser non può leggere automaticamente il barcode dalla foto.");
+    const formats=await BarcodeDetector.getSupportedFormats();
+    const wanted=['ean_13','ean_8','upc_a','upc_e','code_128'].filter(x=>formats.includes(x));
+    const det=new BarcodeDetector(wanted.length?{formats:wanted}:undefined);
+    const bmp=await createImageBitmap(file);
+    const codes=await det.detect(bmp);
+    if(bmp.close)bmp.close();
+    if(!codes || !codes[0] || !codes[0].rawValue) throw new Error("Codice non riconosciuto. Prova ad avvicinarti e scattare una foto nitida.");
+    await cercaBarcode(codes[0].rawValue);
+  }catch(e){
+    setScanStatus((e&&e.message)||"Non riesco a leggere il barcode dalla foto. Puoi digitarlo manualmente.");
+  }finally{
+    input.value='';
+  }
+}
+function apriFotocameraNativa(){
+  const input=document.getElementById('scan-photo-input');
+  if(input) input.click();
+}
+
 function stopScannerCamera(){if(scannerTimer){clearInterval(scannerTimer);scannerTimer=null}if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null}const v=document.getElementById('scan-video');if(v)v.srcObject=null}
 function chiudiScanner(){stopScannerCamera();document.getElementById('barcode-overlay').classList.add('hidden');scannerItem=null;scannerFood=null}
 function riavviaScanner(){scannerFood=null;document.getElementById('scan-result').classList.add('hidden');document.getElementById('scan-result').innerHTML='';startScannerCamera()}
-function confermaBarcode(){if(!scannerItem||!scannerFood)return;const item=scannerItem, food=scannerFood;activeListId=scannerListId||activeListId;chiudiScanner();cambiaStato(item,true,food)}
+function confermaBarcode(){if(!scannerItem||!scannerFood)return;const item=scannerItem, food=scannerFood, listId=scannerListId||activeListId;chiudiScanner();segnaCompratoBarcode(item,food,listId)}
 
 // Assicura aggiornamento del riepilogo anche quando si entra nella lista.
 const __mostraVista=mostraVista;mostraVista=function(which){__mostraVista(which);if(which==='list')renderAcquisti()};
@@ -1075,6 +1157,8 @@ window.addEventListener('load',renderAcquisti);
     <div class="scan-head"><div><div class="settings-kicker">ACQUISTO REALE</div><h3 id="scan-title">Scansiona il prodotto</h3></div><button class="scan-close" type="button" onclick="chiudiScanner()">×</button></div>
     <div class="scan-video-wrap" id="scan-video-wrap"><video id="scan-video" class="scan-video" playsinline muted></video><div class="scan-guide"></div></div>
     <div id="scan-status" class="scan-status">Inquadra il codice a barre della confezione.</div>
+    <input id="scan-photo-input" type="file" accept="image/*" capture="environment" class="hidden" onchange="leggiBarcodeDaFoto(this)">
+    <p style="margin:10px 0 8px;"><button type="button" class="secondary" style="width:100%;font-size:16px;" onclick="apriFotocameraNativa()">📷 Scatta foto barcode</button></p>
     <div class="scan-manual"><input id="scan-manual-code" inputmode="numeric" autocomplete="off" placeholder="Oppure digita il barcode"><button type="button" onclick="cercaBarcode(document.getElementById('scan-manual-code').value)">Cerca</button></div>
     <div id="scan-result" class="scan-result hidden"></div>
   </div>
