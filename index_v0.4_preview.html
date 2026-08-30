@@ -365,7 +365,7 @@
 <script>
 const HA_URL = "tepktbbit8utngvxc3enhyzgigkwehzm.ui.nabu.casa";
 const PIN_CORRETTO = "6912";
-const APP_VERSION = "v0.4 preview 05";
+const APP_VERSION = "v0.4 preview 08 (fix Claude)";
 const UNITA = ["pz", "kg", "g", "L", "ml"];
 
 const LISTE = [
@@ -483,6 +483,8 @@ let descrizioneSupportata = true; // diventa false se il primo tentativo fallisc
 let tentativiRiconnessione = 0;
 let riconnessioneTimer = null;
 let chiusuraVolontaria = false;
+const caricamentiInCorso = {}; // entityId -> Promise, evita ricaricamenti concorrenti sovrapposti
+const timerDebounceEvento = {}; // entityId -> timeout id, raggruppa raffiche di eventi state_changed
 
 // ── IMPOSTAZIONI E TEMA ─────────────────────────────────────
 const TEMI=[
@@ -656,11 +658,17 @@ function connetti() {
     if (msg.type === "event") {
       const entityId = msg.event && msg.event.data && msg.event.data.entity_id;
       if (LISTE.some(l => l.id === entityId)) {
-        log("Aggiornamento per " + entityId);
-        caricaLista(entityId).then(() => {
-          disegnaTessere();
-          if (entityId === activeListId) ridisegna();
-        });
+        // Debounce: una singola azione (aggiunta, spunta...) può generare più eventi
+        // state_changed ravvicinati. Raggruppiamo in un solo ricaricamento dopo una
+        // breve pausa, invece di farne partire uno per ogni evento in arrivo.
+        clearTimeout(timerDebounceEvento[entityId]);
+        timerDebounceEvento[entityId] = setTimeout(() => {
+          log("Aggiornamento per " + entityId);
+          caricaLista(entityId).then(() => {
+            disegnaTessere();
+            if (entityId === activeListId) ridisegna();
+          });
+        }, 400);
       }
     }
   };
@@ -715,7 +723,14 @@ function caricaTutteLeListe() {
 }
 
 function caricaLista(entityId) {
-  return inviaComando({ type: "todo/item/list", entity_id: entityId })
+  // Se per questa lista c'è già un caricamento in corso, ci si aggancia a quello
+  // invece di farne partire un secondo in parallelo: due letture concorrenti della
+  // stessa lista possono arrivare in ordine invertito e far vedere per un attimo
+  // uno stato più vecchio di quello reale (o farlo apparire "resettato").
+  if (caricamentiInCorso[entityId]) {
+    return caricamentiInCorso[entityId];
+  }
+  const promessa = inviaComando({ type: "todo/item/list", entity_id: entityId })
     .then((result) => {
       const items = (result.items || []).map(parseItem);
       listsData[entityId] = { items };
@@ -723,7 +738,10 @@ function caricaLista(entityId) {
     .catch((err) => {
       log("Errore caricando " + entityId + ": " + JSON.stringify(err));
       listsData[entityId] = { items: [] };
-    });
+    })
+    .finally(() => { delete caricamentiInCorso[entityId]; });
+  caricamentiInCorso[entityId] = promessa;
+  return promessa;
 }
 
 // Estrae qty/unità/categoria dal campo description (se presente), altrimenti default
@@ -819,6 +837,18 @@ function creaRiga(item, completato) {
 }
 
 // ── AZIONI ───────────────────────────────────────────────────
+// Un tasto (checkbox, stepper, select categoria...) porta con sé l'oggetto "item"
+// così com'era quando la riga è stata disegnata. Se nel frattempo è arrivato un
+// ricaricamento (dalla propria stessa azione o da un evento state_changed), quel
+// riferimento può essere superato. Prima di agire, si recupera sempre la versione
+// più recente dello stesso articolo (per uid) da listsData, quando disponibile.
+function itemAttuale(item, listId) {
+  const data = listsData[listId || activeListId];
+  if (!data) return item;
+  const trovato = data.items.find(i => i.uid === item.uid);
+  return trovato || item;
+}
+
 function salvaMetaDati(item) {
   if (!descrizioneSupportata) return Promise.resolve();
   return inviaComando({
@@ -835,7 +865,8 @@ function salvaMetaDati(item) {
 }
 
 // delta: +1/-1 per lo stepper. Se valoreDigitato è passato, sovrascrive direttamente la quantità (input da tastiera).
-function cambiaQuantita(item, delta, valoreDigitato) {
+function cambiaQuantita(itemRif, delta, valoreDigitato) {
+  const item = itemAttuale(itemRif);
   const vecchioValore = item.qty;
   item.qty = valoreDigitato !== undefined ? valoreDigitato : Math.max(1, item.qty + delta);
   ridisegna();
@@ -846,7 +877,8 @@ function cambiaQuantita(item, delta, valoreDigitato) {
   });
 }
 
-function cambiaUnita(item, nuovaUnita) {
+function cambiaUnita(itemRif, nuovaUnita) {
+  const item = itemAttuale(itemRif);
   const vecchiaUnita = item.unit;
   item.unit = nuovaUnita;
   salvaMetaDati(item).catch(() => {
@@ -856,7 +888,8 @@ function cambiaUnita(item, nuovaUnita) {
   });
 }
 
-function cambiaCategoria(item, nuovaCategoria) {
+function cambiaCategoria(itemRif, nuovaCategoria) {
+  const item = itemAttuale(itemRif);
   const vecchiaCat = item.cat;
   item.cat = nuovaCategoria || "altro";
   imparaCategoria(item.summary, item.cat);
@@ -878,8 +911,9 @@ function rimuoviUltimoAcquisto(item,listId){const a=leggiAcquisti();for(let i=a.
 function escAcq(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function renderAcquisti(){const cnt=document.getElementById("purchases-count"),body=document.getElementById("purchases-body");if(!cnt||!body)return;const a=leggiAcquisti().filter(x=>!x.trasferito);cnt.textContent=a.length;if(!a.length){body.innerHTML='<p class="add-hint">Nessun acquisto registrato.</p>';return}body.innerHTML=a.slice().reverse().map(x=>'<div class="purchase-row"><div class="purchase-main"><div class="purchase-name">'+escAcq(x.nomeAcquistato)+'</div><div class="purchase-meta">'+escAcq(x.qty+' '+x.unit+' · '+(CATEGORIE.find(c=>c.id===x.cat)?.nome||x.cat)+(x.marca?' · '+x.marca:'')+(x.formato?' · '+x.formato:''))+'</div></div><span class="purchase-mode">'+(x.modalita==='barcode'?'▥ barcode':'✓ manuale')+'</span></div>').join('')}
 
-function cambiaStato(item, completato) {
+function cambiaStato(itemRif, completato) {
   const listId = activeListId;
+  const item = itemAttuale(itemRif, listId);
   inviaComando({
     type: "call_service", domain: "todo", service: "update_item",
     service_data: { item: item.uid, status: completato ? "completed" : "needs_action" },
@@ -898,28 +932,45 @@ function aggiungiArticolo() {
   const testo = input.value.trim();
   if (!testo) return;
   const listId = activeListId;
+  const categoriaIniziale = categoriaAutomatica(testo);
+
+  // Un'unica chiamata: il nome e i metadati (qty/cat/unit) vengono scritti insieme,
+  // così l'articolo non esiste mai, nemmeno per un istante, senza i suoi dati.
+  // In precedenza si usavano due chiamate separate (add_item, poi update_item per la
+  // descrizione): quella finestra di tempo permetteva a un evento state_changed di
+  // HA di innescare un ricaricamento concorrente proprio a metà dell'operazione.
+  const datiIniziali = descrizioneSupportata
+    ? { item: testo, description: JSON.stringify({ qty: 1, cat: categoriaIniziale, unit: "pz" }) }
+    : { item: testo };
 
   inviaComando({
     type: "call_service", domain: "todo", service: "add_item",
-    service_data: { item: testo },
+    service_data: datiIniziali,
     target: { entity_id: listId }
   }).then(() => {
     input.value = "";
     return caricaLista(listId);
   }).then(() => {
-    const data = listsData[listId];
-    const nuovo = data && [...data.items].reverse().find(i => i.status !== "completed" && i.summary.trim().toLowerCase() === testo.toLowerCase());
-    if (nuovo && nuovo.cat === "altro") nuovo.cat = categoriaAutomatica(testo);
-    if (nuovo && descrizioneSupportata) {
-      return inviaComando({
-        type: "call_service", domain: "todo", service: "update_item",
-        service_data: { item: nuovo.uid, description: JSON.stringify({ qty: nuovo.qty, cat: nuovo.cat, unit: nuovo.unit }) },
-        target: { entity_id: listId }
-      }).catch(()=>{}).then(()=>{ disegnaTessere(); if (activeListId === listId) ridisegna(); });
-    }
     disegnaTessere();
     if (activeListId === listId) ridisegna();
-  }).catch((err) => log("Errore aggiunta: " + JSON.stringify(err)));
+  }).catch((err) => {
+    // Se il servizio non accetta "description" direttamente in add_item (integrazione
+    // che non lo supporta), ripieghiamo su una singola add_item senza metadati:
+    // l'articolo resterà "Non categorizzato"/qty 1 di default, correggibile a mano.
+    if (descrizioneSupportata) {
+      log("add_item con description fallito, ripiego su add_item semplice: " + JSON.stringify(err));
+      descrizioneSupportata = false;
+      inviaComando({
+        type: "call_service", domain: "todo", service: "add_item",
+        service_data: { item: testo },
+        target: { entity_id: listId }
+      }).then(() => { input.value = ""; return caricaLista(listId); })
+        .then(() => { disegnaTessere(); if (activeListId === listId) ridisegna(); })
+        .catch((err2) => log("Errore aggiunta (ripiego): " + JSON.stringify(err2)));
+    } else {
+      log("Errore aggiunta: " + JSON.stringify(err));
+    }
+  });
 }
 
 // ── BARCODE / OPEN FOOD FACTS ───────────────────────────────
