@@ -243,6 +243,31 @@
     .qty-stepper { margin-left:auto; }
   }
 
+
+
+  /* ── acquisto v0.4: riga unica + barcode ── */
+  .item{flex-wrap:nowrap!important;gap:6px!important;padding:9px 8px!important;min-width:0;overflow:hidden}
+  .item .name{min-width:0!important;flex:1 1 auto!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:1rem!important}
+  .item input[type="checkbox"]{width:24px!important;height:24px!important;flex:0 0 24px}
+  .item .cat-select{width:42px!important;max-width:42px!important;min-width:42px!important;padding:5px 2px!important;margin-left:0!important;color:transparent;text-shadow:0 0 0 var(--ui-text);background:var(--ui-card)!important}
+  .item .qty-compact{display:flex;align-items:center;gap:3px;flex:0 0 auto;min-width:0}
+  .item .qty-compact input{width:48px!important;min-width:42px!important;padding:5px 3px!important;text-align:center;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-card);color:var(--ui-text);font-size:.9rem!important}
+  .item .qty-compact select{width:48px!important;min-width:44px!important;padding:5px 2px!important;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-card);color:var(--ui-text);font-size:.82rem!important}
+  .barcode-btn{width:38px!important;height:34px!important;min-width:38px!important;padding:0!important;border-radius:9px!important;background:var(--ui-card)!important;color:var(--ui-accent2)!important;border:1px solid var(--ui-border)!important;font-size:20px!important;display:flex;align-items:center;justify-content:center}
+  .item.done .name{flex:1 1 auto!important}.item.done .restore-btn{flex:0 0 auto}
+  @media(max-width:390px){.item{gap:4px!important}.item .qty-compact input{width:42px!important}.item .qty-compact select{width:44px!important}.barcode-btn{width:34px!important;min-width:34px!important}.item .cat-select{width:36px!important;min-width:36px!important;max-width:36px!important}}
+
+  .purchases-box{margin-top:14px;border:1px solid var(--ui-border);border-radius:16px;background:var(--ui-card);box-shadow:var(--ui-shadow);overflow:hidden}
+  .purchases-box summary{cursor:pointer;list-style:none;padding:13px 14px;font-weight:800;display:flex;align-items:center;justify-content:space-between}
+  .purchases-box summary::-webkit-details-marker{display:none}.purchases-body{border-top:1px solid var(--ui-border);padding:10px 12px;background:var(--ui-bg2)}
+  .purchase-row{padding:9px 0;border-bottom:1px solid var(--ui-border);display:flex;gap:8px;align-items:flex-start}.purchase-row:last-child{border-bottom:0}.purchase-main{flex:1;min-width:0}.purchase-name{font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.purchase-meta{font-size:.76rem;color:var(--ui-text3);margin-top:2px}.purchase-mode{font-size:.72rem;padding:3px 7px;border-radius:999px;background:var(--ui-card);border:1px solid var(--ui-border);white-space:nowrap}
+
+  .scan-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.58);display:flex;align-items:flex-end;justify-content:center;padding:14px}.scan-panel{width:min(520px,100%);max-height:92vh;overflow:auto;background:var(--ui-card);color:var(--ui-text);border-radius:22px 22px 14px 14px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  .scan-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.scan-head h3{margin:0;font-size:1.25rem}.scan-close{width:38px;height:38px;border-radius:10px;padding:0;background:var(--ui-bg2)!important;color:var(--ui-text)!important;border:1px solid var(--ui-border)!important}
+  .scan-video-wrap{position:relative;background:#111;border-radius:14px;overflow:hidden;aspect-ratio:4/3}.scan-video{width:100%;height:100%;object-fit:cover;display:block}.scan-guide{position:absolute;left:12%;right:12%;top:33%;height:34%;border:3px solid rgba(255,255,255,.88);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.18)}
+  .scan-status{font-size:.84rem;margin:9px 0;color:var(--ui-text2)}.scan-manual{display:flex;gap:7px}.scan-manual input{flex:1;border:1px solid var(--ui-border);border-radius:10px;padding:9px;background:var(--ui-card);color:var(--ui-text)}
+  .scan-result{margin-top:10px;padding:12px;border-radius:14px;background:var(--ui-bg2);border:1px solid var(--ui-border)}.scan-result h4{margin:0 0 3px;font-size:1rem}.scan-result .brand{font-size:.8rem;color:var(--ui-text3)}.scan-nutr{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:9px}.scan-nutr div{text-align:center;border:1px solid var(--ui-border);border-radius:9px;padding:6px 3px;background:var(--ui-card)}.scan-nutr b{display:block;font-size:.9rem}.scan-nutr span{font-size:.65rem;color:var(--ui-text3)}.scan-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.scan-actions button{min-height:44px}
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
@@ -311,6 +336,11 @@
         </div>
         <p class="add-hint">La categoria viene proposta automaticamente. Le tue correzioni vengono ricordate.</p>
       </div>
+
+      <details class="purchases-box" id="purchases-box">
+        <summary><span>🧺 Acquisti da trasferire</span><span id="purchases-count">0</span></summary>
+        <div class="purchases-body" id="purchases-body"><p class="add-hint">Nessun acquisto registrato.</p></div>
+      </details>
     </section>
 
     <section id="view-settings" class="app-view">
@@ -957,5 +987,98 @@ window.onload = () => {
   // altrimenti resta visibile la schermata PIN, già mostrata di default
 };
 </script>
+
+
+<script>
+// ── ACQUISTI / BARCODE v0.4-preview ──────────────────────────
+const ACQUISTI_KEY = "lista_spesa_acquisti_v1";
+let scannerStream = null, scannerTimer = null, scannerItem = null, scannerListId = null, scannerFood = null;
+function leggiAcquisti(){try{return JSON.parse(localStorage.getItem(ACQUISTI_KEY)||"[]")||[]}catch(e){return []}}
+function salvaAcquisti(a){localStorage.setItem(ACQUISTI_KEY,JSON.stringify(a));renderAcquisti()}
+function nuovoIdAcquisto(){return "a_"+Date.now()+"_"+Math.random().toString(36).slice(2,8)}
+function nomeLista(id){const l=LISTE.find(x=>x.id===id);return l?l.nome:id}
+function registraAcquisto(item, mode, food){
+  const a=leggiAcquisti();
+  const nutr=food?{kcal:food.kcal,proteine:food.proteine,carboidrati:food.carboidrati,zuccheri:food.zuccheri,grassi:food.grassi,saturi:food.saturi,fibre:food.fibre,sale:food.sale,fonte:"Open Food Facts"}:null;
+  const r={id:nuovoIdAcquisto(),createdAt:new Date().toISOString(),sourceListId:activeListId,sourceListName:nomeLista(activeListId),sourceUid:item.uid,voceLista:item.summary,modalita:mode,nomeAcquistato:food?food.nome:item.summary,marca:food?food.marca:"",barcode:food?food.barcode:"",formato:food?food.formato:"",qty:item.qty,unit:item.unit,cat:item.cat,nutr:nutr,trasferito:false};
+  a.push(r);salvaAcquisti(a);return r.id;
+}
+function annullaAcquisto(id){if(!id)return;salvaAcquisti(leggiAcquisti().filter(x=>x.id!==id))}
+function rimuoviUltimoAcquistoItem(item){const a=leggiAcquisti();for(let i=a.length-1;i>=0;i--){if(!a[i].trasferito&&a[i].sourceUid===item.uid&&a[i].sourceListId===activeListId){a.splice(i,1);break}}salvaAcquisti(a)}
+function renderAcquisti(){
+  const cnt=document.getElementById("purchases-count"), body=document.getElementById("purchases-body");if(!cnt||!body)return;
+  const a=leggiAcquisti().filter(x=>!x.trasferito);cnt.textContent=a.length;
+  if(!a.length){body.innerHTML='<p class="add-hint">Nessun acquisto registrato.</p>';return}
+  body.innerHTML=a.slice().reverse().map(x=>'<div class="purchase-row"><div class="purchase-main"><div class="purchase-name">'+escAcq(x.nomeAcquistato)+'</div><div class="purchase-meta">'+escAcq(x.qty+' '+x.unit+' · '+(CATEGORIE.find(c=>c.id===x.cat)?.nome||x.cat)+(x.marca?' · '+x.marca:'')+(x.formato?' · '+x.formato:''))+'</div></div><span class="purchase-mode">'+(x.modalita==='barcode'?'▥ barcode':'✓ manuale')+'</span></div>').join('');
+}
+function escAcq(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+// Override riga: tutto su una sola riga, con quantità compatta e scanner.
+function creaRiga(item, completato) {
+  const row=document.createElement("div");row.className="item"+(completato?" done":"");
+  const checkbox=document.createElement("input");checkbox.type="checkbox";checkbox.checked=!!completato;checkbox.onchange=()=>cambiaStato(item,checkbox.checked);row.appendChild(checkbox);
+  const name=document.createElement("span");name.className="name";name.textContent=item.summary;name.title=item.summary;row.appendChild(name);
+  if(!completato){
+    const cat=document.createElement("select");cat.className="cat-select";cat.title="Categoria";CATEGORIE.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.emoji+" "+c.nome;if(c.id===item.cat)o.selected=true;cat.appendChild(o)});cat.onchange=()=>cambiaCategoria(item,cat.value);row.appendChild(cat);
+    const q=document.createElement("div");q.className="qty-compact";
+    const val=document.createElement("input");val.type="number";val.min="0.01";val.step="any";val.value=item.qty;val.setAttribute("aria-label","Quantità");val.onchange=()=>{const n=parseFloat(val.value);cambiaQuantita(item,0,isNaN(n)||n<=0?1:n)};
+    const un=document.createElement("select");un.setAttribute("aria-label","Unità");UNITA.forEach(u=>{const o=document.createElement("option");o.value=u;o.textContent=u;if(u===item.unit)o.selected=true;un.appendChild(o)});un.onchange=()=>cambiaUnita(item,un.value);q.appendChild(val);q.appendChild(un);row.appendChild(q);
+    const b=document.createElement("button");b.type="button";b.className="barcode-btn";b.textContent="▥";b.title="Comprato: scansiona barcode";b.setAttribute("aria-label","Scansiona barcode e segna comprato");b.onclick=()=>apriScanner(item);row.appendChild(b);
+  }else{const r=document.createElement("button");r.className="secondary restore-btn";r.textContent="Ripristina";r.onclick=()=>cambiaStato(item,false);row.appendChild(r)}
+  return row;
+}
+
+// Spunta manuale = acquisto generico; scansione = acquisto specifico OFF.
+function cambiaStato(item, completato, acquistoSpecifico) {
+  let acquistoId=null;
+  if(completato) acquistoId=registraAcquisto(item,acquistoSpecifico?"barcode":"manuale",acquistoSpecifico||null);
+  else rimuoviUltimoAcquistoItem(item);
+  return inviaComando({type:"call_service",domain:"todo",service:"update_item",service_data:{item:item.uid,status:completato?"completed":"needs_action"},target:{entity_id:activeListId}})
+    .then(()=>caricaLista(activeListId)).then(()=>{disegnaTessere();ridisegna();renderAcquisti()})
+    .catch(err=>{if(acquistoId)annullaAcquisto(acquistoId);log("Errore cambio stato: "+JSON.stringify(err));ridisegna()});
+}
+
+function n(v){const x=Number(v);return Number.isFinite(x)?x:null}
+function normalizeOFF(json,code){
+  const p=(json&&json.product)||json||{}, z=p.nutriments||{};
+  const nome=(p.product_name_it||p.product_name||p.generic_name_it||p.generic_name||("Prodotto "+code)).trim();
+  return{barcode:String(p.code||code),nome:nome,marca:String(p.brands||'').trim(),formato:String(p.quantity||'').trim(),kcal:n(z['energy-kcal_100g']),proteine:n(z.proteins_100g),carboidrati:n(z.carbohydrates_100g),zuccheri:n(z.sugars_100g),grassi:n(z.fat_100g),saturi:n(z['saturated-fat_100g']),fibre:n(z.fiber_100g),sale:n(z.salt_100g)};
+}
+async function cercaBarcode(raw){
+  const code=String(raw||'').replace(/\D/g,'');if(!/^\d{6,18}$/.test(code)){setScanStatus("Codice non valido.");return}
+  stopScannerCamera();setScanStatus("Cerco "+code+" su Open Food Facts…");
+  try{const url='https://world.openfoodfacts.org/api/v3/product/'+encodeURIComponent(code)+'?lc=it&cc=it&fields=code,product_name,product_name_it,generic_name,generic_name_it,brands,quantity,nutriments';const r=await fetch(url,{headers:{Accept:'application/json'}});if(r.status===404)throw new Error('Prodotto non trovato');if(!r.ok)throw new Error('Errore Open Food Facts '+r.status);scannerFood=normalizeOFF(await r.json(),code);renderScanResult(scannerFood);setScanStatus("Prodotto trovato. Conferma per segnare l'articolo come comprato.")}
+  catch(e){scannerFood=null;setScanStatus((e&&e.message)||"Ricerca non riuscita")}
+}
+function fmtN(v,d=1){return v===null||v===undefined?'—':Number(v).toFixed(d).replace('.',',')}
+function renderScanResult(f){const h=document.getElementById('scan-result');h.classList.remove('hidden');h.innerHTML='<h4>'+escAcq(f.nome)+'</h4><div class="brand">'+escAcq([f.marca,f.formato,f.barcode].filter(Boolean).join(' · '))+'</div><div class="scan-nutr"><div><b>'+fmtN(f.kcal,0)+'</b><span>kcal/100g</span></div><div><b>'+fmtN(f.proteine)+'</b><span>proteine</span></div><div><b>'+fmtN(f.carboidrati)+'</b><span>carboidrati</span></div><div><b>'+fmtN(f.grassi)+'</b><span>grassi</span></div></div><div class="scan-actions"><button class="secondary" type="button" onclick="riavviaScanner()">Riprova</button><button type="button" onclick="confermaBarcode()">✓ Comprato</button></div>'}
+function setScanStatus(t){const e=document.getElementById('scan-status');if(e)e.textContent=t}
+async function apriScanner(item){scannerItem=item;scannerListId=activeListId;scannerFood=null;document.getElementById('scan-title').textContent=item.summary;document.getElementById('scan-result').classList.add('hidden');document.getElementById('scan-result').innerHTML='';document.getElementById('scan-manual-code').value='';document.getElementById('barcode-overlay').classList.remove('hidden');await startScannerCamera()}
+async function startScannerCamera(){
+  stopScannerCamera();setScanStatus("Inquadra il codice a barre della confezione.");
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setScanStatus("Fotocamera non disponibile: inserisci il barcode manualmente.");return}
+  try{scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const v=document.getElementById('scan-video');v.srcObject=scannerStream;await v.play();
+    if('BarcodeDetector' in window){const formats=await BarcodeDetector.getSupportedFormats();const wanted=['ean_13','ean_8','upc_a','upc_e','code_128'].filter(x=>formats.includes(x));const det=new BarcodeDetector(wanted.length?{formats:wanted}:undefined);scannerTimer=setInterval(async()=>{try{if(v.readyState<2)return;const codes=await det.detect(v);if(codes&&codes[0]&&codes[0].rawValue){clearInterval(scannerTimer);scannerTimer=null;cercaBarcode(codes[0].rawValue)}}catch(e){}},350)}else setScanStatus("Scanner automatico non supportato da questo browser: puoi inserire il codice manualmente.");
+  }catch(e){setScanStatus("Non riesco ad aprire la fotocamera: inserisci il barcode manualmente.")}
+}
+function stopScannerCamera(){if(scannerTimer){clearInterval(scannerTimer);scannerTimer=null}if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null}const v=document.getElementById('scan-video');if(v)v.srcObject=null}
+function chiudiScanner(){stopScannerCamera();document.getElementById('barcode-overlay').classList.add('hidden');scannerItem=null;scannerFood=null}
+function riavviaScanner(){scannerFood=null;document.getElementById('scan-result').classList.add('hidden');document.getElementById('scan-result').innerHTML='';startScannerCamera()}
+function confermaBarcode(){if(!scannerItem||!scannerFood)return;const item=scannerItem, food=scannerFood;activeListId=scannerListId||activeListId;chiudiScanner();cambiaStato(item,true,food)}
+
+// Assicura aggiornamento del riepilogo anche quando si entra nella lista.
+const __mostraVista=mostraVista;mostraVista=function(which){__mostraVista(which);if(which==='list')renderAcquisti()};
+window.addEventListener('load',renderAcquisti);
+</script>
+<div id="barcode-overlay" class="scan-overlay hidden" role="dialog" aria-modal="true" aria-label="Scansione codice a barre">
+  <div class="scan-panel">
+    <div class="scan-head"><div><div class="settings-kicker">ACQUISTO REALE</div><h3 id="scan-title">Scansiona il prodotto</h3></div><button class="scan-close" type="button" onclick="chiudiScanner()">×</button></div>
+    <div class="scan-video-wrap" id="scan-video-wrap"><video id="scan-video" class="scan-video" playsinline muted></video><div class="scan-guide"></div></div>
+    <div id="scan-status" class="scan-status">Inquadra il codice a barre della confezione.</div>
+    <div class="scan-manual"><input id="scan-manual-code" inputmode="numeric" autocomplete="off" placeholder="Oppure digita il barcode"><button type="button" onclick="cercaBarcode(document.getElementById('scan-manual-code').value)">Cerca</button></div>
+    <div id="scan-result" class="scan-result hidden"></div>
+  </div>
+</div>
+
 </body>
 </html>
