@@ -173,7 +173,7 @@
   .stg-hdr{padding:14px 16px;background:var(--ui-card);border:1px solid var(--ui-border);box-shadow:var(--ui-shadow);border-radius:14px 14px 0 0}.stg-sub{font-size:.72rem;color:var(--ui-text3);margin-top:2px}.stg-body{background:var(--ui-bg2);border:1px solid var(--ui-border);border-top:none;border-radius:0 0 14px 14px;padding:16px 14px;margin-bottom:10px}.theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.theme-opt{border-radius:12px;padding:14px 12px;cursor:pointer;border:2px solid transparent;background:var(--ui-card);color:var(--ui-text);text-align:left}.theme-opt.on{border-color:var(--ui-accent)}.theme-dots{display:flex;gap:4px;margin-top:8px}.theme-dot{width:16px;height:16px;border-radius:50%;border:1px solid rgba(128,128,128,.15)}
   .list-color-grid{display:flex;flex-direction:column;gap:9px}.list-color-row{display:flex;align-items:center;gap:10px;background:var(--ui-card);border:1px solid var(--ui-border);border-radius:12px;padding:9px 10px}.list-color-label{flex:1;font-size:.84rem;font-weight:600}.list-color-row input[type="color"]{width:52px;height:34px;padding:2px;border:1px solid var(--ui-border);border-radius:9px;background:var(--ui-card);cursor:pointer}.reset-list-colors{width:100%;margin-top:10px;border-radius:12px!important}.setting-switch{display:flex;align-items:center;justify-content:space-between;gap:12px}.setting-switch span{flex:1}.setting-switch small{display:block;color:var(--ui-text3);margin-top:3px}.setting-switch input{width:21px;height:21px}.settings-note{font-size:.78rem;color:var(--ui-text2);margin:0 0 10px}.btn-danger-soft{width:100%;padding:11px;border-radius:12px;border:1px solid #b84c3a66;background:#b84c3a14;color:#b84c3a;font-weight:600}.settings-version{text-align:center;color:var(--ui-text3);font-size:.7rem;margin:18px 0}.debug-details{margin-top:22px;color:var(--ui-text3);font-size:.72rem}
 
-  /* ── preview-e: navigazione a schermate, leggibilità, palette Windows ── */
+  /* ── v0.4-preview: navigazione a schermate, leggibilità, palette Windows ── */
   html { font-size: 17px; }
   #app-header { padding: 1rem 1.1rem!important; }
   #app-header h1 { font-size: 1.35rem!important; }
@@ -354,7 +354,7 @@
 <script>
 const HA_URL = "tepktbbit8utngvxc3enhyzgigkwehzm.ui.nabu.casa";
 const PIN_CORRETTO = "6912";
-const APP_VERSION = "v0.4-preview-e";
+const APP_VERSION = "v0.4-preview";
 const UNITA = ["pz", "kg", "g", "L", "ml"];
 
 const LISTE = [
@@ -377,35 +377,91 @@ const DEFAULT_COLORS = {
 let impostazioni = null; // caricate da localStorage all'avvio
 
 const CATEGORIE = [
-  { id: "ortaggi", nome: "Ortaggi", emoji: "🥕" },
+  { id: "verdure", nome: "Verdure", emoji: "🥦" },
   { id: "frutta", nome: "Frutta", emoji: "🍎" },
-  { id: "latticini", nome: "Latticini", emoji: "🥛" },
-  { id: "carne", nome: "Carne", emoji: "🥩" },
+  { id: "carne_salumi", nome: "Carne e salumi", emoji: "🥩" },
   { id: "pesce", nome: "Pesce", emoji: "🐟" },
-  { id: "dispensa", nome: "Dispensa", emoji: "🥫" },
+  { id: "latticini_uova", nome: "Latticini e uova", emoji: "🥛" },
+  { id: "pasta_riso_cereali", nome: "Pasta, riso e cereali", emoji: "🍝" },
+  { id: "farine_panificazione", nome: "Farine e panificazione", emoji: "🌾" },
+  { id: "legumi", nome: "Legumi", emoji: "🫘" },
+  { id: "conserve", nome: "Conserve", emoji: "🥫" },
+  { id: "confetture_spalmabili", nome: "Confetture e spalmabili", emoji: "🍯" },
+  { id: "oli_condimenti", nome: "Oli e condimenti", emoji: "🫒" },
+  { id: "spezie_aromi", nome: "Spezie e aromi", emoji: "🌶️" },
+  { id: "pane_sostituti", nome: "Pane e sostituti", emoji: "🍞" },
+  { id: "dolci", nome: "Dolci", emoji: "🍰" },
+  { id: "snack_dolciumi", nome: "Snack e dolciumi", emoji: "🍿" },
   { id: "bevande", nome: "Bevande", emoji: "🥤" },
-  { id: "pulizia", nome: "Pulizia", emoji: "🧼" },
-  { id: "piante", nome: "Piante", emoji: "🌱" },
-  { id: "altro", nome: "Non categorizzato", emoji: "❔" }
+  { id: "vini_liquori", nome: "Vini e liquori", emoji: "🍷" },
+  { id: "cura_casa", nome: "Cura della casa", emoji: "🧹" },
+  { id: "igiene_personale", nome: "Igiene personale", emoji: "🧴" },
+  { id: "animali", nome: "Animali", emoji: "🐾" },
+  { id: "giardino_piante", nome: "Giardino e piante", emoji: "🌱" },
+  { id: "altro", nome: "Altro", emoji: "🏷️" }
 ];
 
-
+// Memoria locale delle correzioni manuali prodotto → categoria.
 const CATEGORY_MEMORY_KEY = "lista_spesa_category_memory_v1";
+
+// Regole di prima classificazione. La categoria descrive la natura del prodotto,
+// non il reparto del negozio né il fatto che sia fresco/surgelato.
 const CATEGORY_RULES = {
-  ortaggi:["pomodoro","pomodorini","melanzana","zucchina","zucchine","peperone","peperoni","insalata","lattuga","cipolla","cipolle","aglio","carota","carote","patata","patate","finocchio","finocchi","broccoli","broccolo","cavolfiore","cavolo","porro","porri","fagiolini","coste","barbabietola","zucca","sedano","cetriolo"],
-  frutta:["mela","mele","pera","pere","banana","banane","pesca","pesche","albicocca","albicocche","fragole","fragola","uva","limone","limoni","arancia","arance","kiwi","melone","anguria","fichi","fico","susine","prugne"],
-  latticini:["latte","yogurt","ricotta","mozzarella","formaggio","parmigiano","grana","feta","burro","panna","stracchino","robiola","gorgonzola"],
-  carne:["pollo","tacchino","manzo","vitello","maiale","salsiccia","hamburger","prosciutto","bresaola","salame","carne","fegato","capocollo"],
-  pesce:["pesce","salmone","tonno","orata","branzino","merluzzo","pescatrice","gamberi","gamberetti","calamari","cozze","vongole","spada","acciughe","alici","sarde"],
-  bevande:["acqua","vino","birra","succo","cola","coca cola","aranciata","tonica","te freddo","the freddo"],
-  pulizia:["detersivo","candeggina","ammorbidente","spugna","spugne","sgrassatore","sapone","lavastoviglie","lavatrice","carta cucina","carta igienica","sacchi immondizia","pattumiera"],
-  piante:["pianta","piante","terriccio","concime","fertilizzante","vaso","vasi","semi","bulbi","fiore","fiori","basilico","rosmarino","salvia"],
-  dispensa:["pasta","riso","farro","quinoa","pane","farina","pangrattato","olio","aceto","sale","zucchero","caffe","biscotti","cracker","legumi","ceci","fagioli","lenticchie","mais","passata","pelati","marmellata","miele","cereali","uova","uovo"]
+  verdure:["pomodoro","pomodorini","melanzana","zucchina","zucchine","peperone","peperoni","insalata","lattuga","radicchio","cipolla","cipolle","aglio","carota","carote","patata","patate","finocchio","finocchi","broccoli","broccolo","cavolfiore","cavolo","verza","porro","porri","fagiolini","coste","barbabietola","zucca","sedano","cetriolo","spinaci","bietole","piselli freschi"],
+  frutta:["mela","mele","pera","pere","banana","banane","pesca","pesche","albicocca","albicocche","fragola","fragole","uva","limone","limoni","arancia","arance","mandarino","mandarini","kiwi","melone","anguria","fico","fichi","susina","susine","prugna","prugne","ananas","mango","mirtilli","lamponi"],
+  carne_salumi:["pollo","tacchino","manzo","vitello","maiale","coniglio","agnello","salsiccia","hamburger","prosciutto","bresaola","salame","mortadella","speck","pancetta","carne","fegato","capocollo","wurstel"],
+  pesce:["pesce","salmone","tonno","orata","branzino","merluzzo","pescatrice","gamberi","gamberetti","calamari","cozze","vongole","spada","acciughe","alici","sarde","polpo","seppie","trota","sgombro"],
+  latticini_uova:["latte","yogurt","ricotta","mozzarella","formaggio","parmigiano","grana","feta","burro","panna","stracchino","robiola","gorgonzola","fontina","taleggio","mascarpone","uova","uovo"],
+  pasta_riso_cereali:["pasta","riso","farro","quinoa","cous cous","couscous","orzo perlato","bulgur","avena","cereali","semolino","polenta"],
+  farine_panificazione:["farina","farine","fecola","amido","lievito","pangrattato","pan grattato","bicarbonato","malto","preparato per pane","preparato per pizza"],
+  legumi:["ceci","cece","fagioli","fagiolo","lenticchie","lenticchia","piselli secchi","soia","edamame","cicerchie","lupini"],
+  conserve:["passata","pelati","polpa di pomodoro","concentrato di pomodoro","mais","capperi","olive","carciofini","giardiniera","antipasto piemontese","antipasto alla piemontese","sottaceti","sottolio","conserva"],
+  confetture_spalmabili:["marmellata","marmellate","confettura","confetture","miele","crema spalmabile","nutella","crema nocciole","crema di nocciole","burro di arachidi","crema di arachidi","crema di mandorle","crema di pistacchio"],
+  oli_condimenti:["olio","aceto","maionese","ketchup","senape","salsa barbecue","barbecue","salsa yogurt","salsa di soia","tabasco","condimento","strutto","margarina"],
+  spezie_aromi:["sale","pepe","paprika","curcuma","curry","noce moscata","cannella","origano","timo","rosmarino secco","salvia secca","chiodi di garofano","vaniglia","zafferano","spezie","aromi"],
+  pane_sostituti:["pane","piadina","piadine","focaccia","grissini","cracker","crackers","fette biscottate","gallette","taralli","crostone","crostini"],
+  dolci:["torta","torte","gelato","budino","tiramisù","tiramisu","bunet","biscotti","biscotto","merendina","merendine","croissant","brioche","pasticcini","dessert"],
+  snack_dolciumi:["patatine","popcorn","caramelle","caramella","cioccolato","cioccolatini","snack","barretta","barrette","noccioline","salatini"],
+  bevande:["acqua","succo","succhi","cola","coca cola","aranciata","tonica","te freddo","the freddo","tè freddo","caffe","caffè","te","tè","tisane","tisana","latte di mandorla","bevanda vegetale"],
+  vini_liquori:["vino","vini","birra","birre","prosecco","spumante","vermouth","amaro","liquore","liquori","grappa","gin","vodka","rum","whisky","whiskey"],
+  cura_casa:["detersivo","candeggina","ammorbidente","spugna","spugne","sgrassatore","lavastoviglie","lavatrice","carta cucina","carta igienica","sacchi immondizia","sacchetti immondizia","pattumiera","detergente pavimenti","anticalcare","brillantante"],
+  igiene_personale:["shampoo","balsamo","bagnoschiuma","docciaschiuma","dentifricio","spazzolino","deodorante","sapone mani","crema corpo","crema viso","rasoio","assorbenti","cerotti","collutorio"],
+  animali:["crocchette","umido cane","umido gatto","cibo cane","cibo gatto","premietti","masticativo","masticativi","lettiera","sacchetti cane","biscotti cane","snack cane"],
+  giardino_piante:["pianta","piante","terriccio","concime","fertilizzante","vaso","vasi","semi","sementi","bulbi","fiore","fiori","piantina","piantine","antiparassitario","pacciamatura"]
 };
+
+const OLD_CATEGORY_MAP = {
+  ortaggi:"verdure",
+  frutta:"frutta",
+  latticini:"latticini_uova",
+  carne:"carne_salumi",
+  pesce:"pesce",
+  bevande:"bevande",
+  pulizia:"cura_casa",
+  piante:"giardino_piante",
+  altro:"altro"
+};
+
 function normalizzaNomeProdotto(nome){return (nome||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\b\d+(?:[.,]\d+)?\s*(kg|g|gr|l|lt|ml|pz|pezzi|chili|litri?)?\b/g," ").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
 function caricaMemoriaCategorie(){try{return JSON.parse(localStorage.getItem(CATEGORY_MEMORY_KEY)||"{}")}catch(e){return {}}}
-function imparaCategoria(nome,categoria){const key=normalizzaNomeProdotto(nome);if(!key)return;const memoria=caricaMemoriaCategorie();memoria[key]=categoria;localStorage.setItem(CATEGORY_MEMORY_KEY,JSON.stringify(memoria))}
-function categoriaAutomatica(nome){const key=normalizzaNomeProdotto(nome), memoria=caricaMemoriaCategorie();if(memoria[key])return memoria[key];for(const [cat,parole] of Object.entries(CATEGORY_RULES)){if(parole.some(p=>key===p||key.includes(p)||p.includes(key)))return cat}return "altro"}
+function categoriaEsiste(id){return CATEGORIE.some(c=>c.id===id)}
+function migraCategoria(cat,nome){
+  if(!cat) return null;
+  if(categoriaEsiste(cat)) return cat;
+  if(cat==="dispensa") return null; // era troppo generica: riclassifica dal nome
+  return OLD_CATEGORY_MAP[cat]||null;
+}
+function imparaCategoria(nome,categoria){const key=normalizzaNomeProdotto(nome);if(!key||!categoriaEsiste(categoria))return;const memoria=caricaMemoriaCategorie();memoria[key]=categoria;localStorage.setItem(CATEGORY_MEMORY_KEY,JSON.stringify(memoria))}
+function categoriaAutomatica(nome){
+  const key=normalizzaNomeProdotto(nome), memoria=caricaMemoriaCategorie();
+  const mem=migraCategoria(memoria[key],nome);
+  if(mem) return mem;
+  for(const [cat,parole] of Object.entries(CATEGORY_RULES)){
+    if(parole.some(p=>{const pp=normalizzaNomeProdotto(p);return key===pp||key.includes(pp)||pp.includes(key)})) return cat;
+  }
+  return "altro";
+}
+
 
 let ws = null;
 let msgId = 1;
@@ -666,7 +722,7 @@ function parseItem(raw) {
     try {
       const meta = JSON.parse(raw.description);
       if (meta.qty) qty = meta.qty;
-      if (meta.cat) cat = meta.cat;
+      if (meta.cat) cat = migraCategoria(meta.cat, raw.summary) || categoriaAutomatica(raw.summary);
       if (meta.unit) unit = meta.unit;
     } catch (e) { /* description non nel nostro formato, ignora */ }
   }
