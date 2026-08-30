@@ -243,7 +243,7 @@
     .qty-stepper { margin-left:auto; }
   }
 
-  /* v0.4 preview 04: sincronizzazione affidabile operazioni todo + riga unica + barcode */
+  /* v0.4 preview 05: gestione todo ripristinata dalla preview-e + riga unica + barcode */
   .item{flex-wrap:nowrap!important;gap:5px!important;padding:9px 8px!important;min-width:0;overflow:hidden}
   .item .name{min-width:0!important;flex:1 1 auto!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:1rem!important}
   .item input[type="checkbox"]{width:24px!important;height:24px!important;flex:0 0 24px}
@@ -365,7 +365,7 @@
 <script>
 const HA_URL = "tepktbbit8utngvxc3enhyzgigkwehzm.ui.nabu.casa";
 const PIN_CORRETTO = "6912";
-const APP_VERSION = "v0.4 preview 04";
+const APP_VERSION = "v0.4 preview 05";
 const UNITA = ["pz", "kg", "g", "L", "ml"];
 
 const LISTE = [
@@ -656,13 +656,6 @@ function connetti() {
     if (msg.type === "event") {
       const entityId = msg.event && msg.event.data && msg.event.data.entity_id;
       if (LISTE.some(l => l.id === entityId)) {
-        // Durante add/update ignoriamo i state_changed intermedi: il contenuto della
-        // todo può essere ancora quello precedente. Sarà l'operazione in corso a
-        // rileggere la lista finché trova lo stato realmente richiesto.
-        if (mutazioniTodo.has(entityId)) {
-          log("Aggiornamento intermedio ignorato per " + entityId);
-          return;
-        }
         log("Aggiornamento per " + entityId);
         caricaLista(entityId).then(() => {
           disegnaTessere();
@@ -825,42 +818,6 @@ function creaRiga(item, completato) {
   return row;
 }
 
-// ── SINCRONIZZAZIONE OPERAZIONI TODO ─────────────────────────
-// Un state_changed dell'entità todo non garantisce che todo/item/list contenga già
-// il nuovo contenuto. Durante una modifica impediamo quindi ai refresh intermedi
-// di sovrascrivere la UI e verifichiamo direttamente la lista fino alla conferma.
-const mutazioniTodo = new Set();
-
-function leggiListaDiretta(entityId) {
-  return inviaComando({ type: "todo/item/list", entity_id: entityId })
-    .then(result => (result.items || []).map(parseItem));
-}
-
-function attendiCondizioneLista(entityId, verifica, timeoutMs = 5000, intervalloMs = 180) {
-  const inizio = Date.now();
-  return new Promise((resolve, reject) => {
-    const prova = () => {
-      leggiListaDiretta(entityId).then(items => {
-        const trovato = verifica(items);
-        if (trovato) {
-          listsData[entityId] = { items };
-          resolve({ items, trovato });
-          return;
-        }
-        if (Date.now() - inizio >= timeoutMs) {
-          reject(new Error("Home Assistant non ha ancora confermato la modifica"));
-          return;
-        }
-        setTimeout(prova, intervalloMs);
-      }).catch(err => {
-        if (Date.now() - inizio >= timeoutMs) reject(err);
-        else setTimeout(prova, intervalloMs);
-      });
-    };
-    prova();
-  });
-}
-
 // ── AZIONI ───────────────────────────────────────────────────
 function salvaMetaDati(item) {
   if (!descrizioneSupportata) return Promise.resolve();
@@ -923,37 +880,17 @@ function renderAcquisti(){const cnt=document.getElementById("purchases-count"),b
 
 function cambiaStato(item, completato) {
   const listId = activeListId;
-  const statoPrima = item.status;
-  const statoRichiesto = completato ? "completed" : "needs_action";
-
-  // Feedback immediato senza aspettare refresh potenzialmente vecchi.
-  item.status = statoRichiesto;
-  ridisegna();
-  mutazioniTodo.add(listId);
-
   inviaComando({
     type: "call_service", domain: "todo", service: "update_item",
-    service_data: { item: item.uid, status: statoRichiesto },
+    service_data: { item: item.uid, status: completato ? "completed" : "needs_action" },
     target: { entity_id: listId }
-  })
-    .then(() => attendiCondizioneLista(listId, items => {
-      const x = items.find(i => i.uid === item.uid);
-      return x && x.status === statoRichiesto ? x : null;
-    }))
-    .then(() => {
-      // Lo storico viene toccato solo dopo che la lista HA contiene davvero lo stato richiesto.
-      if (completato) registraAcquisto(item, "manuale", null, listId);
-      else rimuoviUltimoAcquisto(item, listId);
-      disegnaTessere();
-      if (activeListId === listId) ridisegna();
-    })
-    .catch(err => {
-      log("Errore cambio stato: " + JSON.stringify(err && (err.message || err)));
-      item.status = statoPrima;
-      alert("La modifica non è stata confermata da Home Assistant. Riprova.");
-      if (activeListId === listId) ridisegna();
-    })
-    .finally(() => mutazioniTodo.delete(listId));
+  }).then(() => caricaLista(listId)).then(() => {
+    disegnaTessere();
+    if (activeListId === listId) ridisegna();
+    // Lo storico è un effetto collaterale e non partecipa mai alla gestione della lista.
+    if (completato) registraAcquisto(item, "manuale", null, listId);
+    else rimuoviUltimoAcquisto(item, listId);
+  }).catch((err) => log("Errore cambio stato: " + JSON.stringify(err)));
 }
 
 function aggiungiArticolo() {
@@ -961,49 +898,28 @@ function aggiungiArticolo() {
   const testo = input.value.trim();
   if (!testo) return;
   const listId = activeListId;
-  const chiave = testo.toLowerCase();
-  const uidPrima = new Set(((listsData[listId] && listsData[listId].items) || []).map(i => i.uid));
-
-  mutazioniTodo.add(listId);
-  input.disabled = true;
 
   inviaComando({
     type: "call_service", domain: "todo", service: "add_item",
     service_data: { item: testo },
     target: { entity_id: listId }
-  })
-    .then(() => attendiCondizioneLista(listId, items => {
-      // Deve essere una nuova voce, non un omonimo già presente prima del comando.
-      return [...items].reverse().find(i =>
-        !uidPrima.has(i.uid) &&
-        i.status !== "completed" &&
-        String(i.summary || "").trim().toLowerCase() === chiave
-      ) || null;
-    }))
-    .then(({ trovato: nuovo }) => {
-      input.value = "";
-      if (nuovo && nuovo.cat === "altro") nuovo.cat = categoriaAutomatica(testo);
-      disegnaTessere();
-      if (activeListId === listId) ridisegna();
-
-      // I metadati sono un secondo passaggio: l'articolo è già confermato e visibile.
-      if (nuovo && descrizioneSupportata) {
-        return inviaComando({
-          type: "call_service", domain: "todo", service: "update_item",
-          service_data: { item: nuovo.uid, description: JSON.stringify({ qty: nuovo.qty, cat: nuovo.cat, unit: nuovo.unit }) },
-          target: { entity_id: listId }
-        }).catch(err => log("Metadati nuovo articolo non salvati: " + JSON.stringify(err)));
-      }
-    })
-    .catch(err => {
-      log("Errore aggiunta: " + JSON.stringify(err && (err.message || err)));
-      alert("L'articolo non è stato confermato da Home Assistant. Riprova.");
-    })
-    .finally(() => {
-      mutazioniTodo.delete(listId);
-      input.disabled = false;
-      input.focus();
-    });
+  }).then(() => {
+    input.value = "";
+    return caricaLista(listId);
+  }).then(() => {
+    const data = listsData[listId];
+    const nuovo = data && [...data.items].reverse().find(i => i.status !== "completed" && i.summary.trim().toLowerCase() === testo.toLowerCase());
+    if (nuovo && nuovo.cat === "altro") nuovo.cat = categoriaAutomatica(testo);
+    if (nuovo && descrizioneSupportata) {
+      return inviaComando({
+        type: "call_service", domain: "todo", service: "update_item",
+        service_data: { item: nuovo.uid, description: JSON.stringify({ qty: nuovo.qty, cat: nuovo.cat, unit: nuovo.unit }) },
+        target: { entity_id: listId }
+      }).catch(()=>{}).then(()=>{ disegnaTessere(); if (activeListId === listId) ridisegna(); });
+    }
+    disegnaTessere();
+    if (activeListId === listId) ridisegna();
+  }).catch((err) => log("Errore aggiunta: " + JSON.stringify(err)));
 }
 
 // ── BARCODE / OPEN FOOD FACTS ───────────────────────────────
@@ -1018,7 +934,22 @@ async function startScannerCamera(){stopScannerCamera();setScanStatus("Inquadra 
 function stopScannerCamera(){if(scannerTimer){clearInterval(scannerTimer);scannerTimer=null}if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null}const v=document.getElementById("scan-video");if(v)v.srcObject=null}
 function chiudiScanner(){stopScannerCamera();document.getElementById("barcode-overlay").classList.add("hidden");scannerItem=null;scannerFood=null}
 function riavviaScanner(){scannerFood=null;document.getElementById("scan-result").classList.add("hidden");document.getElementById("scan-result").innerHTML="";startScannerCamera()}
-function confermaBarcode(){if(!scannerItem||!scannerFood)return;const item=scannerItem,food=scannerFood,listId=scannerListId;chiudiScanner();mutazioniTodo.add(listId);inviaComando({type:"call_service",domain:"todo",service:"update_item",service_data:{item:item.uid,status:"completed"},target:{entity_id:listId}}).then(()=>attendiCondizioneLista(listId,items=>{const x=items.find(i=>i.uid===item.uid);return x&&x.status==="completed"?x:null})).then(()=>{registraAcquisto(item,"barcode",food,listId);disegnaTessere();if(activeListId===listId)ridisegna()}).catch(err=>{log("Errore acquisto barcode: "+JSON.stringify(err&&(err.message||err)));alert("L'acquisto non è stato confermato da Home Assistant. Riprova.");if(activeListId===listId)ridisegna()}).finally(()=>mutazioniTodo.delete(listId))}
+function confermaBarcode(){
+  if(!scannerItem||!scannerFood)return;
+  const item=scannerItem,food=scannerFood,listId=scannerListId;
+  chiudiScanner();
+  inviaComando({
+    type:"call_service",domain:"todo",service:"update_item",
+    service_data:{item:item.uid,status:"completed"},target:{entity_id:listId}
+  }).then(()=>caricaLista(listId)).then(()=>{
+    registraAcquisto(item,"barcode",food,listId);
+    disegnaTessere();
+    if(activeListId===listId)ridisegna();
+  }).catch(err=>{
+    log("Errore acquisto barcode: "+JSON.stringify(err));
+    alert("Non riesco a segnare il prodotto come comprato. Riprova.");
+  });
+}
 
 window.onload = () => {
   document.getElementById("version-tag").textContent = APP_VERSION;
