@@ -255,7 +255,27 @@
 
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  .sync-pill{font-size:12px;margin:0 0 10px;padding:5px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--ui-border);background:var(--ui-card);color:var(--ui-text2)}
+  .sync-pill.ok::before{content:"●";color:#39a845}.sync-pill.busy::before{content:"●";color:#d7a21b}.sync-pill.err::before{content:"●";color:#c7473c}
+  .bought-box{margin-top:12px;border:1px solid var(--ui-border);border-radius:16px;overflow:hidden;background:var(--ui-card)}
+  .bought-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 13px;background:var(--ui-bg2);border-bottom:1px solid var(--ui-border)}
+  .bought-head strong{font-size:.95rem}.bought-head button{padding:8px 10px;border-radius:10px;font-size:.78rem}
+  .bought-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--ui-border)}
+  .bought-row:last-child{border-bottom:none}.bought-name{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .restore-btn{padding:7px 9px!important;border-radius:9px!important;font-size:.75rem!important;background:var(--ui-card)!important;color:var(--ui-text)!important;border:1px solid var(--ui-border)!important}
+  .empty-note{padding:12px;color:var(--ui-text3);font-size:.82rem}
+  .backend-card{padding:12px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-bg2);font-size:.82rem;color:var(--ui-text2)}
+  .danger-mini{width:34px!important;height:34px!important;min-width:34px!important;padding:0!important;border-radius:9px!important;background:var(--ui-card)!important;color:#b84c3a!important;border:1px solid #b84c3a55!important;font-size:18px!important}
+  .purchase-mode.generic{opacity:.75}
+  .pin-box input{letter-spacing:.18em;text-align:center}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:10000;max-width:min(92vw,520px);padding:11px 14px;border-radius:12px;background:#222;color:#fff;font-size:.86rem;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .toast.hidden{display:none}
+</style>
+
 </head>
+
 <body>
 <div class="app">
   <header style="display:flex; align-items:center; justify-content:space-between;" id="app-header">
@@ -265,758 +285,372 @@
     </div>
     <button id="settings-btn" onclick="mostraVista('settings')" style="background:transparent; border:1px solid rgba(255,255,255,0.5); padding:5px 10px; font-size:16px;" class="hidden">⚙</button>
   </header>
-  <main>
 
-    <!-- SCHERMATA PIN -->
+  <main>
     <div class="pin-box" id="pin-box">
       <p style="color:var(--text-muted); font-size:14px;">Inserisci il PIN</p>
-      <input type="password" id="pin-input" inputmode="numeric" maxlength="6" onkeypress="if(event.key==='Enter') verificaPin()">
+      <input type="password" id="pin-input" inputmode="numeric" maxlength="12" autocomplete="current-password"
+             onkeypress="if(event.key==='Enter') verificaPin()">
       <p><button onclick="verificaPin()">Entra</button></p>
-      <p class="error hidden" id="pin-error">PIN errato.</p>
+      <p class="error hidden" id="pin-error"></p>
     </div>
 
-    <!-- SETUP TOKEN -->
-    <div class="setup hidden" id="setup-box">
-      <div>Per collegarti a Home Assistant serve il token di accesso a lunga durata.</div>
-      <input type="password" id="token-input" placeholder="Incolla qui il token">
-      <button onclick="salvaToken()">Connetti</button>
-      <div class="error hidden" id="setup-error"></div>
-    </div>
+    <div class="status hidden" id="status-box">Collegamento al database…</div>
 
-    <div class="status hidden" id="status-box">Connessione in corso...</div>
-
-    <!-- CONTENUTO PRINCIPALE -->
     <div id="content" class="hidden">
+      <p id="sync-indicator" class="sync-pill busy">Sincronizzazione…</p>
 
-      <p id="conn-indicator" style="font-size:12px; margin:0 0 10px; padding:4px 10px; border-radius:999px; display:inline-block;"></p>
-
-    <section id="view-home" class="app-view active">
-      <div class="home-intro">
-        <h2>Le mie liste</h2>
-        <p>Scegli una lista per aprirla.</p>
-      </div>
-      <div class="tiles" id="tiles-container"></div>
-      <button class="new-list-btn" type="button" onclick="nuovaListaNonAncoraAttiva()">＋ Nuova lista</button>
-    </section>
-
-    <section id="view-list" class="app-view">
-      <div class="list-screen-head">
-        <button class="back-btn" type="button" onclick="mostraVista('home')" aria-label="Torna alle liste">‹</button>
-        <div class="list-screen-title-wrap">
-          <div class="settings-kicker">LISTA DELLA SPESA</div>
-          <h2 class="list-title" id="active-list-title">-</h2>
+      <section id="view-home" class="app-view active">
+        <div class="home-intro">
+          <h2>Le mie liste</h2>
+          <p>Scegli una lista per aprirla.</p>
         </div>
-        <select class="sort-select" id="sort-select" onchange="ridisegna()" aria-label="Ordina lista">
-          <option value="categoria">Per categoria</option>
-          <option value="alfabetico">Alfabetico</option>
-        </select>
-      </div>
+        <div class="tiles" id="tiles-container"></div>
+        <button class="new-list-btn" type="button" onclick="nuovaListaNonAncoraAttiva()">＋ Nuova lista</button>
+      </section>
 
-      <div id="items-container"></div>
-
-      <div class="add-card">
-        <div class="add-row">
-          <input type="text" id="new-item-input" placeholder="Aggiungi un prodotto" autocomplete="off" onkeypress="if(event.key==='Enter') aggiungiArticolo()">
-          <button onclick="aggiungiArticolo()" aria-label="Aggiungi">+</button>
+      <section id="view-list" class="app-view">
+        <div class="list-screen-head">
+          <button class="back-btn" type="button" onclick="mostraVista('home')" aria-label="Torna alle liste">‹</button>
+          <div class="list-screen-title-wrap">
+            <div class="settings-kicker">LISTA DELLA SPESA</div>
+            <h2 class="list-title" id="active-list-title">-</h2>
+          </div>
+          <select class="sort-select" id="sort-select" onchange="ridisegna()" aria-label="Ordina lista">
+            <option value="categoria">Per categoria</option>
+            <option value="alfabetico">Alfabetico</option>
+          </select>
         </div>
-        <p class="add-hint">La categoria viene proposta automaticamente. Le tue correzioni vengono ricordate.</p>
-      </div>
-      <details class="purchases-box" id="purchases-box"><summary><span>🧺 Acquisti da trasferire</span><span id="purchases-count">0</span></summary><div class="purchases-body" id="purchases-body"><p class="add-hint">Nessun acquisto registrato.</p></div></details>
-    </section>
 
-    <section id="view-settings" class="app-view">
-      <div class="settings-title-row">
-        <button class="back-btn" type="button" onclick="tornaDaImpostazioni()" aria-label="Indietro">‹</button>
-        <div><div class="settings-kicker">LA MIA LISTA DELLA SPESA</div><h2>Impostazioni</h2></div>
-      </div>
+        <div id="items-container"></div>
 
-      <details class="settings-accordion">
-        <summary><span><strong>🎨 Aspetto</strong><small>Tema dell'app</small></span><span class="chevron">›</span></summary>
-        <div class="accordion-body"><div class="theme-grid" id="theme-grid"></div></div>
-      </details>
-
-      <details class="settings-accordion" id="list-colors-accordion">
-        <summary><span><strong>🛍️ Colori delle liste</strong><small>Palette ispirata ai colori di Windows</small></span><span class="chevron">›</span></summary>
-        <div class="accordion-body">
-          <div id="color-liste-container" class="list-color-grid"></div>
-          <button class="secondary reset-list-colors" type="button" onclick="ripristinaColoriListe()">Ripristina colori originali</button>
+        <div class="add-card">
+          <div class="add-row">
+            <input type="text" id="new-item-input" placeholder="Aggiungi un prodotto" autocomplete="off"
+                   onkeypress="if(event.key==='Enter') aggiungiArticolo()">
+            <button onclick="aggiungiArticolo()" aria-label="Aggiungi">+</button>
+          </div>
+          <p class="add-hint">Gli inserimenti manuali vanno solo nel database dell'app e non vengono inviati ad Alexa.</p>
         </div>
+
+        <div id="bought-container"></div>
+
+        <details class="purchases-box" id="purchases-box" ontoggle="if(this.open) caricaPendingDispensa()">
+          <summary><span>🧺 Acquisti da trasferire</span><span id="purchases-count">0</span></summary>
+          <div class="purchases-body" id="purchases-body"><p class="add-hint">Nessun acquisto da trasferire.</p></div>
+        </details>
+      </section>
+
+      <section id="view-settings" class="app-view">
+        <div class="settings-title-row">
+          <button class="back-btn" type="button" onclick="tornaDaImpostazioni()" aria-label="Indietro">‹</button>
+          <div><div class="settings-kicker">LA MIA LISTA DELLA SPESA</div><h2>Impostazioni</h2></div>
+        </div>
+
+        <details class="settings-accordion">
+          <summary><span><strong>🎨 Aspetto</strong><small>Tema dell'app</small></span><span class="chevron">›</span></summary>
+          <div class="accordion-body"><div class="theme-grid" id="theme-grid"></div></div>
+        </details>
+
+        <details class="settings-accordion" id="list-colors-accordion">
+          <summary><span><strong>🛍️ Colori delle liste</strong><small>Palette ispirata ai colori di Windows</small></span><span class="chevron">›</span></summary>
+          <div class="accordion-body">
+            <div id="color-liste-container" class="list-color-grid"></div>
+            <button class="secondary reset-list-colors" type="button" onclick="ripristinaColoriListe()">Ripristina colori originali</button>
+          </div>
+        </details>
+
+        <details class="settings-accordion">
+          <summary><span><strong>🔐 Accesso</strong><small>Protezione di questo dispositivo</small></span><span class="chevron">›</span></summary>
+          <div class="accordion-body">
+            <label class="setting-switch">
+              <span><b>Richiedi il PIN a ogni apertura</b><small>Se disattivato, il dispositivo viene ricordato.</small></span>
+              <input type="checkbox" id="chiedi-pin-sempre" onchange="salvaImpostazioni()">
+            </label>
+            <button class="btn-danger-soft" style="margin-top:12px" type="button" onclick="dimenticaAccesso()">Dimentica accesso su questo dispositivo</button>
+          </div>
+        </details>
+
+        <details class="settings-accordion">
+          <summary><span><strong>☁️ Database</strong><small>Google Apps Script + JSON su Drive</small></span><span class="chevron">›</span></summary>
+          <div class="accordion-body">
+            <div class="backend-card">
+              La webapp legge e modifica esclusivamente il database della lista. Alexa entra nel sistema tramite Home Assistant, che resta un ponte separato.
+              <div style="margin-top:8px"><b>Revisione database:</b> <span id="db-revision">—</span></div>
+              <div><b>Ultimo aggiornamento:</b> <span id="db-updated">—</span></div>
+            </div>
+          </div>
+        </details>
+
+        <p class="settings-version">Versione <span id="settings-version"></span></p>
+      </section>
+
+      <details id="debug-wrap" class="debug-details">
+        <summary>Diagnostica</summary>
+        <div id="debug-log" style="background:#111;color:#7CFC9A;font-family:monospace;font-size:11px;padding:10px;border-radius:8px;max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:8px;"></div>
       </details>
-
-      <details class="settings-accordion">
-        <summary><span><strong>🔐 Accesso</strong><small>Protezione di questo dispositivo</small></span><span class="chevron">›</span></summary>
-        <div class="accordion-body"><label class="setting-switch"><span><b>Richiedi il PIN a ogni apertura</b><small>Se disattivato, il dispositivo viene ricordato.</small></span><input type="checkbox" id="chiedi-pin-sempre" onchange="salvaImpostazioni()"></label></div>
-      </details>
-
-      <details class="settings-accordion">
-        <summary><span><strong>🏠 Home Assistant</strong><small>Collegamento della lista</small></span><span class="chevron">›</span></summary>
-        <div class="accordion-body"><p class="settings-note">Il token resta salvato solo su questo dispositivo.</p><button class="btn-danger-soft" type="button" onclick="scollega()">Scollega token salvato</button></div>
-      </details>
-
-      <p class="settings-version">Versione <span id="settings-version"></span></p>
-    </section>
-
-    <details id="debug-wrap" class="debug-details"><summary>Diagnostica</summary><div id="debug-log" style="background:#111;color:#7CFC9A;font-family:monospace;font-size:11px;padding:10px;border-radius:8px;max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:8px;"></div></details>
     </div>
-
   </main>
 </div>
 
+<div id="toast" class="toast hidden"></div>
+
+<div id="barcode-overlay" class="scan-overlay hidden" role="dialog" aria-modal="true">
+  <div class="scan-panel">
+    <div class="scan-head">
+      <div><div class="settings-kicker">ACQUISTO REALE</div><h3 id="scan-title">Scansiona il prodotto</h3></div>
+      <button class="scan-close" type="button" onclick="chiudiScanner()">×</button>
+    </div>
+    <div class="scan-video-wrap"><video id="scan-video" class="scan-video" playsinline muted></video><div class="scan-guide"></div></div>
+    <div id="scan-status" class="scan-status">Inquadra il codice a barre della confezione.</div>
+    <div class="scan-manual">
+      <input id="scan-manual-code" inputmode="numeric" placeholder="Oppure digita il barcode">
+      <button type="button" onclick="cercaBarcode(document.getElementById('scan-manual-code').value)">Cerca</button>
+    </div>
+    <div id="scan-result" class="scan-result hidden"></div>
+  </div>
+</div>
+
 <script>
-const HA_URL = "tepktbbit8utngvxc3enhyzgigkwehzm.ui.nabu.casa";
-const PIN_CORRETTO = "6912";
-const APP_VERSION = "v0.4 preview 08 (fix Claude)";
-const UNITA = ["pz", "kg", "g", "L", "ml"];
+const API_URL = "https://script.google.com/macros/s/AKfycbwlUOrHMLFX164q7dtYaGWkC8JTjZvK_44c7M9JjGU3v_kvRwebjifqNCu6T3dzTKY3/exec";
+const APP_VERSION = "v0.5 preview 01";
+const PIN_STORAGE = "lista_spesa_app_pin_v1";
+const TRUST_STORAGE = "lista_spesa_device_trusted_v1";
+const SETTINGS_STORAGE = "app_settings";
+const CATEGORY_MEMORY_KEY = "lista_spesa_category_memory_v2";
+const POLL_MS = 4000;
+const UNITA = ["pz","kg","g","L","ml"];
 
 const LISTE = [
-  { id: "todo.mainaluca_libero_it_verduriere", nome: "Verduriere", classe: "verduriere", emoji: "🥕" },
-  { id: "todo.mainaluca_libero_it_supermercato", nome: "Supermercato", classe: "supermercato", emoji: "🛒" },
-  { id: "todo.mainaluca_libero_it_vivaio", nome: "Vivaio", classe: "vivaio", emoji: "🌱" },
-  { id: "todo.mainaluca_libero_it_pescheria", nome: "Pescheria", classe: "pescheria", emoji: "🐟" }
+  { id:"Verduriere", nome:"Verduriere", emoji:"🥕" },
+  { id:"Supermercato", nome:"Supermercato", emoji:"🛒" },
+  { id:"Vivaio", nome:"Vivaio", emoji:"🌱" },
+  { id:"Pescheria", nome:"Pescheria", emoji:"🐟" }
 ];
 
 const DEFAULT_COLORS = {
-  header: "#2C4A6E",
-  liste: {
-    "todo.mainaluca_libero_it_verduriere": "#3B6D11",
-    "todo.mainaluca_libero_it_supermercato": "#8A6B3A",
-    "todo.mainaluca_libero_it_vivaio": "#5A8A2E",
-    "todo.mainaluca_libero_it_pescheria": "#2C4A6E"
-  }
+  liste:{ Verduriere:"#3B6D11", Supermercato:"#8A6B3A", Vivaio:"#5A8A2E", Pescheria:"#2C4A6E" }
 };
-
-let impostazioni = null; // caricate da localStorage all'avvio
 
 const CATEGORIE = [
-  { id: "verdure", nome: "Verdure", emoji: "🥦" },
-  { id: "frutta", nome: "Frutta", emoji: "🍎" },
-  { id: "carne_salumi", nome: "Carne e salumi", emoji: "🥩" },
-  { id: "pesce", nome: "Pesce", emoji: "🐟" },
-  { id: "latticini_uova", nome: "Latticini e uova", emoji: "🥛" },
-  { id: "pasta_riso_cereali", nome: "Pasta, riso e cereali", emoji: "🍝" },
-  { id: "farine_panificazione", nome: "Farine e panificazione", emoji: "🌾" },
-  { id: "legumi", nome: "Legumi", emoji: "🫘" },
-  { id: "conserve", nome: "Conserve", emoji: "🥫" },
-  { id: "confetture_spalmabili", nome: "Confetture e spalmabili", emoji: "🍯" },
-  { id: "oli_condimenti", nome: "Oli e condimenti", emoji: "🫒" },
-  { id: "spezie_aromi", nome: "Spezie e aromi", emoji: "🌶️" },
-  { id: "pane_sostituti", nome: "Pane e sostituti", emoji: "🍞" },
-  { id: "dolci", nome: "Dolci", emoji: "🍰" },
-  { id: "snack_dolciumi", nome: "Snack e dolciumi", emoji: "🍿" },
-  { id: "bevande", nome: "Bevande", emoji: "🥤" },
-  { id: "vini_liquori", nome: "Vini e liquori", emoji: "🍷" },
-  { id: "cura_casa", nome: "Cura della casa", emoji: "🧹" },
-  { id: "igiene_personale", nome: "Igiene personale", emoji: "🧴" },
-  { id: "animali", nome: "Animali", emoji: "🐾" },
-  { id: "giardino_piante", nome: "Giardino e piante", emoji: "🌱" },
-  { id: "altro", nome: "Altro", emoji: "🏷️" }
+  {id:"Verdure",nome:"Verdure",emoji:"🥦"},
+  {id:"Frutta",nome:"Frutta",emoji:"🍎"},
+  {id:"Carne e salumi",nome:"Carne e salumi",emoji:"🥩"},
+  {id:"Pesce",nome:"Pesce",emoji:"🐟"},
+  {id:"Latticini e uova",nome:"Latticini e uova",emoji:"🥛"},
+  {id:"Pasta, riso e cereali",nome:"Pasta, riso e cereali",emoji:"🍝"},
+  {id:"Farine e panificazione",nome:"Farine e panificazione",emoji:"🌾"},
+  {id:"Legumi",nome:"Legumi",emoji:"🫘"},
+  {id:"Conserve",nome:"Conserve",emoji:"🥫"},
+  {id:"Confetture e spalmabili",nome:"Confetture e spalmabili",emoji:"🍯"},
+  {id:"Oli e condimenti",nome:"Oli e condimenti",emoji:"🫒"},
+  {id:"Spezie e aromi",nome:"Spezie e aromi",emoji:"🌶️"},
+  {id:"Pane e sostituti",nome:"Pane e sostituti",emoji:"🍞"},
+  {id:"Dolci",nome:"Dolci",emoji:"🍰"},
+  {id:"Snack e dolciumi",nome:"Snack e dolciumi",emoji:"🍿"},
+  {id:"Bevande",nome:"Bevande",emoji:"🥤"},
+  {id:"Vini e liquori",nome:"Vini e liquori",emoji:"🍷"},
+  {id:"Cura della casa",nome:"Cura della casa",emoji:"🧹"},
+  {id:"Igiene personale",nome:"Igiene personale",emoji:"🧴"},
+  {id:"Animali",nome:"Animali",emoji:"🐾"},
+  {id:"Giardino e piante",nome:"Giardino e piante",emoji:"🌱"},
+  {id:"Altro",nome:"Altro",emoji:"🏷️"}
 ];
 
-// Memoria locale delle correzioni manuali prodotto → categoria.
-const CATEGORY_MEMORY_KEY = "lista_spesa_category_memory_v1";
-
-// Regole di prima classificazione. La categoria descrive la natura del prodotto,
-// non il reparto del negozio né il fatto che sia fresco/surgelato.
 const CATEGORY_RULES = {
-  verdure:["pomodoro","pomodorini","melanzana","zucchina","zucchine","peperone","peperoni","insalata","lattuga","radicchio","cipolla","cipolle","aglio","carota","carote","patata","patate","finocchio","finocchi","broccoli","broccolo","cavolfiore","cavolo","verza","porro","porri","fagiolini","coste","barbabietola","zucca","sedano","cetriolo","spinaci","bietole","piselli freschi"],
-  frutta:["mela","mele","pera","pere","banana","banane","pesca","pesche","albicocca","albicocche","fragola","fragole","uva","limone","limoni","arancia","arance","mandarino","mandarini","kiwi","melone","anguria","fico","fichi","susina","susine","prugna","prugne","ananas","mango","mirtilli","lamponi"],
-  carne_salumi:["pollo","tacchino","manzo","vitello","maiale","coniglio","agnello","salsiccia","hamburger","prosciutto","bresaola","salame","mortadella","speck","pancetta","carne","fegato","capocollo","wurstel"],
-  pesce:["pesce","salmone","tonno","orata","branzino","merluzzo","pescatrice","gamberi","gamberetti","calamari","cozze","vongole","spada","acciughe","alici","sarde","polpo","seppie","trota","sgombro"],
-  latticini_uova:["latte","yogurt","ricotta","mozzarella","formaggio","parmigiano","grana","feta","burro","panna","stracchino","robiola","gorgonzola","fontina","taleggio","mascarpone","uova","uovo"],
-  pasta_riso_cereali:["pasta","riso","farro","quinoa","cous cous","couscous","orzo perlato","bulgur","avena","cereali","semolino","polenta"],
-  farine_panificazione:["farina","farine","fecola","amido","lievito","pangrattato","pan grattato","bicarbonato","malto","preparato per pane","preparato per pizza"],
-  legumi:["ceci","cece","fagioli","fagiolo","lenticchie","lenticchia","piselli secchi","soia","edamame","cicerchie","lupini"],
-  conserve:["passata","pelati","polpa di pomodoro","concentrato di pomodoro","mais","capperi","olive","carciofini","giardiniera","antipasto piemontese","antipasto alla piemontese","sottaceti","sottolio","conserva"],
-  confetture_spalmabili:["marmellata","marmellate","confettura","confetture","miele","crema spalmabile","nutella","crema nocciole","crema di nocciole","burro di arachidi","crema di arachidi","crema di mandorle","crema di pistacchio"],
-  oli_condimenti:["olio","aceto","maionese","ketchup","senape","salsa barbecue","barbecue","salsa yogurt","salsa di soia","tabasco","condimento","strutto","margarina"],
-  spezie_aromi:["sale","pepe","paprika","curcuma","curry","noce moscata","cannella","origano","timo","rosmarino secco","salvia secca","chiodi di garofano","vaniglia","zafferano","spezie","aromi"],
-  pane_sostituti:["pane","piadina","piadine","focaccia","grissini","cracker","crackers","fette biscottate","gallette","taralli","crostone","crostini"],
-  dolci:["torta","torte","gelato","budino","tiramisù","tiramisu","bunet","biscotti","biscotto","merendina","merendine","croissant","brioche","pasticcini","dessert"],
-  snack_dolciumi:["patatine","popcorn","caramelle","caramella","cioccolato","cioccolatini","snack","barretta","barrette","noccioline","salatini"],
-  bevande:["acqua","succo","succhi","cola","coca cola","aranciata","tonica","te freddo","the freddo","tè freddo","caffe","caffè","te","tè","tisane","tisana","latte di mandorla","bevanda vegetale"],
-  vini_liquori:["vino","vini","birra","birre","prosecco","spumante","vermouth","amaro","liquore","liquori","grappa","gin","vodka","rum","whisky","whiskey"],
-  cura_casa:["detersivo","candeggina","ammorbidente","spugna","spugne","sgrassatore","lavastoviglie","lavatrice","carta cucina","carta igienica","sacchi immondizia","sacchetti immondizia","pattumiera","detergente pavimenti","anticalcare","brillantante"],
-  igiene_personale:["shampoo","balsamo","bagnoschiuma","docciaschiuma","dentifricio","spazzolino","deodorante","sapone mani","crema corpo","crema viso","rasoio","assorbenti","cerotti","collutorio"],
-  animali:["crocchette","umido cane","umido gatto","cibo cane","cibo gatto","premietti","masticativo","masticativi","lettiera","sacchetti cane","biscotti cane","snack cane"],
-  giardino_piante:["pianta","piante","terriccio","concime","fertilizzante","vaso","vasi","semi","sementi","bulbi","fiore","fiori","piantina","piantine","antiparassitario","pacciamatura"]
+ "Verdure":["pomodoro","pomodorini","melanzana","zucchina","peperone","insalata","lattuga","radicchio","cipolla","aglio","carota","patata","finocchio","broccoli","cavolfiore","cavolo","verza","porro","fagiolini","coste","barbabietola","zucca","sedano","cetriolo","spinaci","bietole"],
+ "Frutta":["mela","pera","banana","pesca","albicocca","fragola","uva","limone","arancia","mandarino","kiwi","melone","anguria","fico","susina","prugna","ananas","mango","mirtilli","lamponi"],
+ "Carne e salumi":["pollo","tacchino","manzo","vitello","maiale","coniglio","agnello","salsiccia","hamburger","prosciutto","bresaola","salame","mortadella","speck","pancetta","carne","fegato","wurstel"],
+ "Pesce":["pesce","salmone","tonno","orata","branzino","merluzzo","pescatrice","gamber","calamari","cozze","vongole","spada","acciughe","alici","sarde","polpo","seppie","trota","sgombro"],
+ "Latticini e uova":["latte","yogurt","ricotta","mozzarella","formaggio","parmigiano","grana","feta","burro","panna","stracchino","robiola","gorgonzola","fontina","taleggio","mascarpone","uova","uovo"],
+ "Pasta, riso e cereali":["pasta","riso","farro","quinoa","cous cous","couscous","orzo","bulgur","avena","cereali","semolino","polenta"],
+ "Farine e panificazione":["farina","fecola","amido","lievito","pangrattato","pan grattato","bicarbonato","malto"],
+ "Legumi":["ceci","cece","fagioli","lenticchie","piselli secchi","soia","edamame","cicerchie","lupini"],
+ "Conserve":["passata","pelati","polpa di pomodoro","concentrato","mais","capperi","olive","carciofini","giardiniera","sottaceti","sottolio"],
+ "Confetture e spalmabili":["marmellata","confettura","miele","crema spalmabile","nutella","burro di arachidi","crema di pistacchio"],
+ "Oli e condimenti":["olio","aceto","maionese","ketchup","senape","salsa barbecue","salsa yogurt","salsa di soia","tabasco","strutto","margarina"],
+ "Spezie e aromi":["sale","pepe","paprika","curcuma","curry","noce moscata","cannella","origano","timo","zafferano","spezie","aromi"],
+ "Pane e sostituti":["pane","piadina","focaccia","grissini","cracker","fette biscottate","gallette","taralli","crostini"],
+ "Dolci":["torta","gelato","budino","tiramisù","tiramisu","bunet","biscotti","biscotto","merendina","croissant","brioche","pasticcini","dessert"],
+ "Snack e dolciumi":["patatine","popcorn","caramelle","cioccolato","snack","barretta","noccioline","salatini"],
+ "Bevande":["acqua","succo","cola","coca cola","aranciata","tonica","te freddo","tè freddo","caffè","caffe","tisana","latte di mandorla","bevanda vegetale"],
+ "Vini e liquori":["vino","birra","prosecco","spumante","vermouth","amaro","liquore","grappa","gin","vodka","rum","whisky"],
+ "Cura della casa":["detersivo","candeggina","ammorbidente","spugna","sgrassatore","lavastoviglie","lavatrice","carta cucina","carta igienica","sacchi immondizia","anticalcare","brillantante"],
+ "Igiene personale":["shampoo","balsamo","bagnoschiuma","dentifricio","spazzolino","deodorante","sapone","crema corpo","crema viso","rasoio","assorbenti","cerotti","collutorio"],
+ "Animali":["crocchette","umido cane","umido gatto","cibo cane","cibo gatto","premietti","masticativo","lettiera","sacchetti cane","biscotti cane","snack cane"],
+ "Giardino e piante":["pianta","terriccio","concime","fertilizzante","vaso","semi","sementi","bulbi","fiore","piantina","antiparassitario","pacciamatura"]
 };
 
-const OLD_CATEGORY_MAP = {
-  ortaggi:"verdure",
-  frutta:"frutta",
-  latticini:"latticini_uova",
-  carne:"carne_salumi",
-  pesce:"pesce",
-  bevande:"bevande",
-  pulizia:"cura_casa",
-  piante:"giardino_piante",
-  altro:"altro"
-};
-
-function normalizzaNomeProdotto(nome){return (nome||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\b\d+(?:[.,]\d+)?\s*(kg|g|gr|l|lt|ml|pz|pezzi|chili|litri?)?\b/g," ").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
-function caricaMemoriaCategorie(){try{return JSON.parse(localStorage.getItem(CATEGORY_MEMORY_KEY)||"{}")}catch(e){return {}}}
-function categoriaEsiste(id){return CATEGORIE.some(c=>c.id===id)}
-function migraCategoria(cat,nome){
-  if(!cat) return null;
-  if(categoriaEsiste(cat)) return cat;
-  if(cat==="dispensa") return null; // era troppo generica: riclassifica dal nome
-  return OLD_CATEGORY_MAP[cat]||null;
-}
-function imparaCategoria(nome,categoria){const key=normalizzaNomeProdotto(nome);if(!key||!categoriaEsiste(categoria))return;const memoria=caricaMemoriaCategorie();memoria[key]=categoria;localStorage.setItem(CATEGORY_MEMORY_KEY,JSON.stringify(memoria))}
-function categoriaAutomatica(nome){
-  const key=normalizzaNomeProdotto(nome), memoria=caricaMemoriaCategorie();
-  const mem=migraCategoria(memoria[key],nome);
-  if(mem) return mem;
-  for(const [cat,parole] of Object.entries(CATEGORY_RULES)){
-    if(parole.some(p=>{const pp=normalizzaNomeProdotto(p);return key===pp||key.includes(pp)||pp.includes(key)})) return cat;
-  }
-  return "altro";
-}
-
-
-let ws = null;
-let msgId = 1;
-const pending = {};
-const listsData = {}; // entityId -> { items: [...] }
-let activeListId = LISTE[0].id;
-let descrizioneSupportata = true; // diventa false se il primo tentativo fallisce
-let tentativiRiconnessione = 0;
-let riconnessioneTimer = null;
-let chiusuraVolontaria = false;
-const caricamentiInCorso = {}; // entityId -> Promise, evita ricaricamenti concorrenti sovrapposti
-const timerDebounceEvento = {}; // entityId -> timeout id, raggruppa raffiche di eventi state_changed
-
-// ── IMPOSTAZIONI E TEMA ─────────────────────────────────────
 const TEMI=[
 {id:"sepia",nome:"Sepia",c:["#f5f0e8","#8a7a5a","#6b5c3e","#5e7a60"]},{id:"salvia",nome:"Salvia",c:["#eef3ee","#4a7c59","#346045","#7aaa8a"]},{id:"nordic",nome:"Nordic",c:["#eef2f5","#3a6b9a","#2a5278","#5b9ec9"]},{id:"terracotta",nome:"Terracotta",c:["#f7f0eb","#b85c38","#8f3e22","#c4922a"]},{id:"rosa",nome:"Rosa",c:["#fdf0f0","#b85c7a","#8f3a58","#7a9870"]},{id:"lavanda",nome:"Lavanda",c:["#f3f0fa","#7a5cb8","#5a3a98","#5e8a70"]},{id:"pesca",nome:"Pesca",c:["#fdf4ec","#d4804a","#a85c28","#6a9060"]},{id:"menta",nome:"Menta",c:["#fdfaf0","#5a9060","#3a7040","#c8d89a"]},{id:"cielo",nome:"Cielo",c:["#f0f6fc","#4a8ab8","#2a6a98","#5a9870"]},{id:"acqua",nome:"Acqua",c:["#e8f8fc","#0a8ab0","#006a90","#40c0e0"]},{id:"perla",nome:"Perla",c:["#f4f4f6","#6a6a8a","#4a4a6a","#4a8a6a"]},{id:"foresta",nome:"Foresta",c:["#252e28","#5aaa70","#3a8850","#80c890"]},{id:"bluNotte",nome:"Blu Notte",c:["#28303e","#4a7ad4","#2a5ab4","#60d0a0"]},{id:"bordeaux",nome:"Bordeaux",c:["#332028","#c05070","#a03050","#d4a060"]},{id:"notte",nome:"Notte",c:["#2a2d35","#d4a96a","#c4854a","#6aab8a"]}
 ];
-function caricaImpostazioni(){const salvate=localStorage.getItem("app_settings");try{impostazioni=salvate?JSON.parse(salvate):{}}catch(e){impostazioni={}};if(!impostazioni||typeof impostazioni!=="object")impostazioni={};if(!impostazioni.themeId)impostazioni.themeId="sepia";if(typeof impostazioni.chiediPinSempre!=="boolean")impostazioni.chiediPinSempre=false;if(!impostazioni.liste||typeof impostazioni.liste!=="object")impostazioni.liste={};LISTE.forEach(l=>{if(!impostazioni.liste[l.id])impostazioni.liste[l.id]=DEFAULT_COLORS.liste[l.id]||"#4C7CA6"});delete impostazioni.header;localStorage.setItem("app_settings",JSON.stringify(impostazioni))}
+
+const WINDOWS_LIST_COLORS=["#E74856","#FF8C00","#FFB900","#7FBA00","#16C60C","#00CC6A","#00B7C3","#0099BC","#0078D7","#0063B1","#5C2D91","#8764B8","#B146C2","#E3008C","#BF0077","#C239B3","#8E8CD8","#486860","#498205","#107C10","#038387","#008272","#004E8C","#00188F"];
+
+let pin = "";
+let state = {listeAttive:[],compratiSessioneAttuale:[],prodottiAcquistatiSessioneAttuale:[],sessioneAperta:null,pendingPantryCount:0,revision:0,updatedAt:null};
+let pendingDispensa = [];
+let activeListId = "Verduriere";
+let impostazioni = {};
+let pollTimer = null;
+let busyCount = 0;
+let vistaPrimaImpostazioni = "home";
+let scannerItem = null, scannerFood = null, scannerStream = null, scannerTimer = null;
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function log(s){const e=document.getElementById("debug-log");if(e){e.textContent += "["+new Date().toLocaleTimeString()+"] "+s+"\n";e.scrollTop=e.scrollHeight}}
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.classList.remove("hidden");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.add("hidden"),2600)}
+function normalizzaNomeProdotto(nome){return (nome||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
+function caricaMemoriaCategorie(){try{return JSON.parse(localStorage.getItem(CATEGORY_MEMORY_KEY)||"{}")}catch(e){return {}}}
+function imparaCategoria(nome,categoria){const k=normalizzaNomeProdotto(nome);if(!k)return;const m=caricaMemoriaCategorie();m[k]=categoria;localStorage.setItem(CATEGORY_MEMORY_KEY,JSON.stringify(m))}
+function categoriaAutomatica(nome){const k=normalizzaNomeProdotto(nome),m=caricaMemoriaCategorie();if(m[k]&&CATEGORIE.some(c=>c.id===m[k]))return m[k];for(const [cat,parole] of Object.entries(CATEGORY_RULES)){if(parole.some(p=>{const q=normalizzaNomeProdotto(p);return k===q||k.includes(q)||q.includes(k)}))return cat}return "Altro"}
+function categoriaObj(cat){return CATEGORIE.find(c=>c.id===cat)||CATEGORIE.find(c=>c.id==="Altro")}
+
+function caricaImpostazioni(){
+  try{impostazioni=JSON.parse(localStorage.getItem(SETTINGS_STORAGE)||"{}")}catch(e){impostazioni={}}
+  if(!impostazioni||typeof impostazioni!=="object")impostazioni={};
+  if(!impostazioni.themeId)impostazioni.themeId="sepia";
+  if(typeof impostazioni.chiediPinSempre!=="boolean")impostazioni.chiediPinSempre=false;
+  if(!impostazioni.liste||typeof impostazioni.liste!=="object")impostazioni.liste={};
+  LISTE.forEach(l=>{if(!impostazioni.liste[l.id])impostazioni.liste[l.id]=DEFAULT_COLORS.liste[l.id]});
+  localStorage.setItem(SETTINGS_STORAGE,JSON.stringify(impostazioni));
+}
+function contrastText(hex){const h=(hex||"#4C7CA6").replace("#","");const n=parseInt(h.length===3?h.split("").map(x=>x+x).join(""):h,16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (.299*r+.587*g+.114*b)>165?"#151515":"#fff"}
 function applicaColori(){document.body.className=impostazioni.themeId||"sepia";applicaColoriTessere()}
-function contrastText(hex){const h=(hex||"#4C7CA6").replace("#","");const n=parseInt(h.length===3?h.split("").map(x=>x+x).join(""):h,16);const r=(n>>16)&255,g=(n>>8)&255,b=n&255;const lum=(0.299*r+0.587*g+0.114*b);return lum>165?"#151515":"#FFFFFF"}
-function applicaColoriTessere(){document.querySelectorAll(".tile").forEach(tile=>{const id=tile.dataset.entityId;const colore=(impostazioni.liste&&impostazioni.liste[id])||DEFAULT_COLORS.liste[id]||"#4C7CA6";const testo=contrastText(colore);tile.style.setProperty("background",colore,"important");tile.style.setProperty("color",testo,"important");tile.style.setProperty("border-color",colore,"important");tile.querySelectorAll(".name,.count,.emoji").forEach(el=>el.style.setProperty("color",testo,"important"))})}
-function renderTemi(){const host=document.getElementById("theme-grid");if(!host)return;host.innerHTML="";TEMI.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="theme-opt"+(impostazioni.themeId===t.id?" on":"");b.onclick=()=>{impostazioni.themeId=t.id;salvaImpostazioni();renderTemi()};b.innerHTML='<strong>'+t.nome+'</strong><div class="theme-dots">'+t.c.map(x=>'<span class="theme-dot" style="background:'+x+'"></span>').join("")+'</div>';host.appendChild(b)})}
-const WINDOWS_LIST_COLORS=[
-  "#E74856","#FF8C00","#FFB900","#7FBA00","#16C60C","#00CC6A",
-  "#00B7C3","#0099BC","#0078D7","#0063B1","#5C2D91","#8764B8",
-  "#B146C2","#E3008C","#BF0077","#C239B3","#8E8CD8","#486860",
-  "#498205","#107C10","#038387","#008272","#004E8C","#00188F"
-];
-function renderColoriListe(){const host=document.getElementById("color-liste-container");if(!host)return;host.innerHTML="";LISTE.forEach(l=>{const colore=impostazioni.liste[l.id]||DEFAULT_COLORS.liste[l.id]||"#0078D7";const row=document.createElement("div");row.className="list-color-row";const head=document.createElement("div");head.className="list-color-head";head.innerHTML='<div class="current-color" style="background:'+colore+'"></div><div class="list-color-label">'+l.emoji+' '+l.nome+'</div>';const pal=document.createElement("div");pal.className="windows-palette";WINDOWS_LIST_COLORS.forEach(c=>{const b=document.createElement("button");b.type="button";b.className="color-swatch"+(c.toLowerCase()===colore.toLowerCase()?" selected":"");b.style.background=c;b.title=c;b.setAttribute("aria-label","Imposta "+l.nome+" a "+c);b.onclick=()=>{impostazioni.liste[l.id]=c;salvaImpostazioni();renderColoriListe();disegnaTessere()};pal.appendChild(b)});row.appendChild(head);row.appendChild(pal);host.appendChild(row)})}
-function ripristinaColoriListe(){impostazioni.liste={...DEFAULT_COLORS.liste};salvaImpostazioni();renderColoriListe();disegnaTessere()}
-function salvaImpostazioni(){const cb=document.getElementById("chiedi-pin-sempre");if(cb)impostazioni.chiediPinSempre=cb.checked;localStorage.setItem("app_settings",JSON.stringify(impostazioni));applicaColori()}
-let vistaPrimaImpostazioni="home";
-function vistaAttiva(){const v=document.querySelector(".app-view.active");return v?v.id.replace("view-",""):"home"}
-function mostraVista(which){if(which==="settings")vistaPrimaImpostazioni=vistaAttiva()==="settings"?"home":vistaAttiva();document.querySelectorAll(".app-view").forEach(v=>v.classList.remove("active"));const target=document.getElementById("view-"+which);if(target)target.classList.add("active");if(which==="settings"){const cb=document.getElementById("chiedi-pin-sempre");if(cb)cb.checked=!!impostazioni.chiediPinSempre;renderTemi();renderColoriListe();const sv=document.getElementById("settings-version");if(sv)sv.textContent=APP_VERSION}if(which==="home")disegnaTessere();if(which==="list"){ridisegna();renderAcquisti()}}
-function tornaDaImpostazioni(){mostraVista(vistaPrimaImpostazioni==="list"?"list":"home")}
-function apriLista(entityId){activeListId=entityId;mostraVista("list")}
-function nuovaListaNonAncoraAttiva(){alert("La creazione di nuove liste verrà collegata ad Alexa/Home Assistant in un passaggio successivo.")}
+function applicaColoriTessere(){document.querySelectorAll(".tile").forEach(tile=>{const id=tile.dataset.entityId,c=impostazioni.liste[id]||DEFAULT_COLORS.liste[id],t=contrastText(c);tile.style.setProperty("background",c,"important");tile.style.setProperty("color",t,"important");tile.style.setProperty("border-color",c,"important");tile.querySelectorAll(".name,.count,.emoji").forEach(el=>el.style.setProperty("color",t,"important"))})}
+function salvaImpostazioni(){const cb=document.getElementById("chiedi-pin-sempre");if(cb)impostazioni.chiediPinSempre=cb.checked;localStorage.setItem(SETTINGS_STORAGE,JSON.stringify(impostazioni));applicaColori()}
+function renderTemi(){const h=document.getElementById("theme-grid");h.innerHTML="";TEMI.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="theme-opt"+(impostazioni.themeId===t.id?" on":"");b.onclick=()=>{impostazioni.themeId=t.id;salvaImpostazioni();renderTemi()};b.innerHTML="<strong>"+esc(t.nome)+"</strong><div class='theme-dots'>"+t.c.map(x=>"<span class='theme-dot' style='background:"+x+"'></span>").join("")+"</div>";h.appendChild(b)})}
+function renderColoriListe(){const h=document.getElementById("color-liste-container");h.innerHTML="";LISTE.forEach(l=>{const c=impostazioni.liste[l.id];const row=document.createElement("div");row.className="list-color-row";const head=document.createElement("div");head.className="list-color-head";head.innerHTML="<div class='current-color' style='background:"+c+"'></div><div class='list-color-label'>"+l.emoji+" "+l.nome+"</div>";const pal=document.createElement("div");pal.className="windows-palette";WINDOWS_LIST_COLORS.forEach(x=>{const b=document.createElement("button");b.type="button";b.className="color-swatch"+(x.toLowerCase()===c.toLowerCase()?" selected":"");b.style.background=x;b.onclick=()=>{impostazioni.liste[l.id]=x;salvaImpostazioni();renderColoriListe();disegnaTessere()};pal.appendChild(b)});row.appendChild(head);row.appendChild(pal);h.appendChild(row)})}
+function ripristinaColoriListe(){LISTE.forEach(l=>impostazioni.liste[l.id]=DEFAULT_COLORS.liste[l.id]);salvaImpostazioni();renderColoriListe();disegnaTessere()}
 
-// ── PIN ──────────────────────────────────────────────────────
-function verificaPin() {
-  const val = document.getElementById("pin-input").value.trim();
-  if (val === PIN_CORRETTO) {
-    if (!impostazioni.chiediPinSempre) {
-      sessionStorage.setItem("pin_ok_sessione", "1"); // ricordato solo per questa sessione del browser
-      localStorage.setItem("pin_ok_dispositivo", "1"); // ricordato stabilmente su questo dispositivo
-    }
-    document.getElementById("pin-box").classList.add("hidden");
-    avviaApp();
-  } else {
-    document.getElementById("pin-error").classList.remove("hidden");
-  }
+function vistaAttiva(){const e=document.querySelector(".app-view.active");return e?e.id.replace("view-",""):"home"}
+function mostraVista(which){if(which==="settings")vistaPrimaImpostazioni=vistaAttiva()==="settings"?"home":vistaAttiva();document.querySelectorAll(".app-view").forEach(v=>v.classList.remove("active"));document.getElementById("view-"+which)?.classList.add("active");if(which==="home")disegnaTessere();if(which==="list")ridisegna();if(which==="settings"){document.getElementById("chiedi-pin-sempre").checked=!!impostazioni.chiediPinSempre;renderTemi();renderColoriListe();document.getElementById("settings-version").textContent=APP_VERSION;aggiornaMetaUI()}}
+function tornaDaImpostazioni(){mostraVista(vistaPrimaImpostazioni==="settings"?"home":vistaPrimaImpostazioni)}
+function nuovaListaNonAncoraAttiva(){alert("La creazione di nuove liste non è ancora attiva. Le quattro liste attuali restano quelle collegate ad Alexa.")}
+
+function setSync(kind,text){const e=document.getElementById("sync-indicator");if(!e)return;e.className="sync-pill "+kind;e.textContent=text}
+async function api(action,data={}){
+  if(!pin)throw new Error("PIN non disponibile");
+  busyCount++; setSync("busy","Sincronizzazione…");
+  try{
+    const r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,pin,...data}),redirect:"follow"});
+    const j=await r.json();
+    if(!j.ok){const er=new Error(j.message||j.error||"Errore backend");er.code=j.error;throw er}
+    setSync("ok","Sincronizzato");
+    return j;
+  }catch(e){setSync("err","Errore di sincronizzazione");log("API "+action+": "+(e.message||e));throw e}
+  finally{busyCount=Math.max(0,busyCount-1)}
 }
-
-function pinGiaRicordato() {
-  return !impostazioni.chiediPinSempre && localStorage.getItem("pin_ok_dispositivo") === "1";
-}
-
-function avviaApp() {
-  document.getElementById("settings-btn").classList.remove("hidden");
-  mostraIndicatoreConnessione("offline");
-  if (getToken()) {
-    connetti();
-  } else {
-    document.getElementById("setup-box").classList.remove("hidden");
-  }
-}
-
-// ── TOKEN ────────────────────────────────────────────────────
-function getToken() { return localStorage.getItem("ha_token"); }
-
-function salvaToken() {
-  const val = document.getElementById("token-input").value.trim();
-  if (!val) { mostraErroreSetup("Incolla il token prima di continuare."); return; }
-  localStorage.setItem("ha_token", val);
-  connetti();
-}
-
-function scollega() {
-  localStorage.removeItem("ha_token");
-  location.reload();
-}
-
-function mostraErroreSetup(msg) {
-  const el = document.getElementById("setup-error");
-  el.textContent = msg;
-  el.classList.remove("hidden");
-}
-
-function mostraStato(msg) {
-  const box = document.getElementById("status-box");
-  box.textContent = msg;
-  box.classList.remove("hidden");
-}
-function nascondiStato() { document.getElementById("status-box").classList.add("hidden"); }
-
-function log(msg) {
-  const box = document.getElementById("debug-log");
-  if (!box) return;
-  const time = new Date().toLocaleTimeString("it-IT");
-  box.textContent += "[" + time + "] " + msg + "\n";
-  box.scrollTop = box.scrollHeight;
-}
-
-function mostraIndicatoreConnessione(stato) {
-  const el = document.getElementById("conn-indicator");
-  if (!el) return;
-  if (stato === "online") {
-    el.textContent = "● Connesso";
-    el.style.background = "#DEF3E2";
-    el.style.color = "#1F7A3D";
-  } else if (stato === "riconnessione") {
-    el.textContent = "● Riconnessione in corso...";
-    el.style.background = "#FBEFD8";
-    el.style.color = "#8A6B1F";
-  } else {
-    el.textContent = "● Non connesso";
-    el.style.background = "#F7DEDD";
-    el.style.color = "#B3312C";
-  }
-}
-
-// ── WEBSOCKET ────────────────────────────────────────────────
-function connetti() {
-  const token = getToken();
-  if (!token) return;
-
-  document.getElementById("setup-box").classList.add("hidden");
-  if (tentativiRiconnessione === 0) mostraStato("Connessione in corso...");
-
-  log("Apertura WebSocket verso " + HA_URL + (tentativiRiconnessione > 0 ? " (tentativo " + tentativiRiconnessione + ")" : ""));
-  chiusuraVolontaria = false;
-  ws = new WebSocket("wss://" + HA_URL + "/api/websocket");
-
-  ws.onopen = () => log("WebSocket aperto");
-
-  ws.onerror = () => log("ERRORE WebSocket");
-
-  ws.onclose = (e) => {
-    log("WebSocket chiuso. Codice: " + e.code);
-    mostraIndicatoreConnessione("offline");
-    // rifiuta tutti i comandi rimasti in sospeso, così chi aspetta una risposta lo sa
-    Object.keys(pending).forEach(id => {
-      pending[id].reject("connessione chiusa");
-      delete pending[id];
-    });
-    if (!chiusuraVolontaria) {
-      pianificaRiconnessione();
-    }
-  };
-
-  ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-
-    if (msg.type === "auth_required") {
-      ws.send(JSON.stringify({ type: "auth", access_token: token }));
-      return;
-    }
-    if (msg.type === "auth_invalid") {
-      log("Token rifiutato");
-      localStorage.removeItem("ha_token");
-      mostraStato("");
-      document.getElementById("setup-box").classList.remove("hidden");
-      mostraErroreSetup("Token non valido o scaduto.");
-      return;
-    }
-    if (msg.type === "auth_ok") {
-      log("Autenticato");
-      tentativiRiconnessione = 0;
-      mostraIndicatoreConnessione("online");
-      nascondiStato();
-      document.getElementById("content").classList.remove("hidden");
-      disegnaTessere();
-      caricaTutteLeListe();
-      sottoscriviAggiornamenti();
-      return;
-    }
-    if (msg.type === "result" && pending[msg.id]) {
-      if (msg.success) { pending[msg.id].resolve(msg.result); }
-      else { log("Comando " + msg.id + " FALLITO: " + JSON.stringify(msg.error)); pending[msg.id].reject(msg.error); }
-      delete pending[msg.id];
-      return;
-    }
-    if (msg.type === "event") {
-      const entityId = msg.event && msg.event.data && msg.event.data.entity_id;
-      if (LISTE.some(l => l.id === entityId)) {
-        // Debounce: una singola azione (aggiunta, spunta...) può generare più eventi
-        // state_changed ravvicinati. Raggruppiamo in un solo ricaricamento dopo una
-        // breve pausa, invece di farne partire uno per ogni evento in arrivo.
-        clearTimeout(timerDebounceEvento[entityId]);
-        timerDebounceEvento[entityId] = setTimeout(() => {
-          log("Aggiornamento per " + entityId);
-          caricaLista(entityId).then(() => {
-            disegnaTessere();
-            if (entityId === activeListId) ridisegna();
-          });
-        }, 400);
-      }
-    }
-  };
-}
-
-function pianificaRiconnessione() {
-  tentativiRiconnessione++;
-  mostraIndicatoreConnessione("riconnessione");
-  // attesa crescente: 2s, 4s, 8s... fino a un massimo di 30s tra un tentativo e l'altro
-  const attesa = Math.min(30000, 2000 * Math.pow(2, tentativiRiconnessione - 1));
-  log("Riprovo tra " + Math.round(attesa / 1000) + " secondi");
-  clearTimeout(riconnessioneTimer);
-  riconnessioneTimer = setTimeout(connetti, attesa);
-}
-
-// Quando il telefono torna in primo piano (es. si riapre l'app/scheda), se il
-// WebSocket risulta chiuso proviamo subito a riconnetterci invece di aspettare.
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && ws && ws.readyState !== WebSocket.OPEN && getToken()) {
-    log("Pagina tornata visibile: verifico la connessione");
-    clearTimeout(riconnessioneTimer);
-    tentativiRiconnessione = 0;
-    connetti();
-  }
-});
-
-function inviaComando(payload) {
-  return new Promise((resolve, reject) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      log("Comando NON inviato: connessione non aperta (" + payload.type + ")");
-      reject("connessione non aperta");
-      return;
-    }
-    const id = msgId++;
-    pending[id] = { resolve, reject };
-    ws.send(JSON.stringify({ id, ...payload }));
-  });
-}
-
-function sottoscriviAggiornamenti() {
-  inviaComando({ type: "subscribe_events", event_type: "state_changed" })
-    .then(() => log("Sottoscrizione attiva"))
-    .catch((err) => log("Sottoscrizione fallita: " + JSON.stringify(err)));
-}
-
-// ── CARICAMENTO DATI ─────────────────────────────────────────
-function caricaTutteLeListe() {
-  Promise.all(LISTE.map(l => caricaLista(l.id))).then(() => {
+async function caricaStato(silent=false){
+  try{
+    const j=await api("getState");
+    state=j;
+    if(!silent)log("Stato caricato, revisione "+(j.revision??"—"));
     disegnaTessere();
-    ridisegna();
-  });
-}
-
-function caricaLista(entityId) {
-  // Se per questa lista c'è già un caricamento in corso, ci si aggancia a quello
-  // invece di farne partire un secondo in parallelo: due letture concorrenti della
-  // stessa lista possono arrivare in ordine invertito e far vedere per un attimo
-  // uno stato più vecchio di quello reale (o farlo apparire "resettato").
-  if (caricamentiInCorso[entityId]) {
-    return caricamentiInCorso[entityId];
-  }
-  const promessa = inviaComando({ type: "todo/item/list", entity_id: entityId })
-    .then((result) => {
-      const items = (result.items || []).map(parseItem);
-      listsData[entityId] = { items };
-    })
-    .catch((err) => {
-      log("Errore caricando " + entityId + ": " + JSON.stringify(err));
-      listsData[entityId] = { items: [] };
-    })
-    .finally(() => { delete caricamentiInCorso[entityId]; });
-  caricamentiInCorso[entityId] = promessa;
-  return promessa;
-}
-
-// Estrae qty/unità/categoria dal campo description (se presente), altrimenti default
-function parseItem(raw) {
-  let qty = 1, cat = categoriaAutomatica(raw.summary), unit = "pz";
-  if (raw.description) {
-    try {
-      const meta = JSON.parse(raw.description);
-      if (meta.qty) qty = meta.qty;
-      if (meta.cat) cat = migraCategoria(meta.cat, raw.summary) || categoriaAutomatica(raw.summary);
-      if (meta.unit) unit = meta.unit;
-    } catch (e) { /* description non nel nostro formato, ignora */ }
-  }
-  return { ...raw, qty, cat, unit };
-}
-
-// ── TESSERE ──────────────────────────────────────────────────
-function disegnaTessere() {
-  const container = document.getElementById("tiles-container");
-  container.innerHTML = "";
-  LISTE.forEach(l => {
-    const data = listsData[l.id];
-    const count = data ? data.items.filter(i => i.status !== "completed").length : "-";
-    const tile = document.createElement("button");
-    tile.className = "tile " + l.classe;
-    tile.dataset.entityId = l.id;
-    tile.innerHTML = `<div class="emoji">${l.emoji}</div><div class="name">${l.nome}</div><div class="count">${count}</div>`;
-    tile.onclick = () => apriLista(l.id);
-    container.appendChild(tile);
-  });
-  if (impostazioni) applicaColori();
-}
-
-// ── DISEGNO LISTA ATTIVA ─────────────────────────────────────
-function ridisegna() {
-  const lista = LISTE.find(l => l.id === activeListId);
-  if (!lista) return;
-  document.getElementById("active-list-title").textContent = lista.nome;
-
-  const data = listsData[activeListId];
-  const container = document.getElementById("items-container");
-  container.innerHTML = "";
-
-  if (!data || data.items.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">Nessun articolo in lista.</p>';
-    return;
-  }
-
-  const daFare = data.items.filter(i => i.status !== "completed");
-  const fatti = data.items.filter(i => i.status === "completed");
-  const modo = document.getElementById("sort-select").value;
-
-  if (modo === "alfabetico") {
-    daFare.sort((a, b) => a.summary.localeCompare(b.summary));
-    daFare.forEach(item => container.appendChild(creaRiga(item)));
-  } else {
-    const gruppi = {};
-    daFare.forEach(item => {
-      if (!gruppi[item.cat]) gruppi[item.cat] = [];
-      gruppi[item.cat].push(item);
-    });
-    CATEGORIE.forEach(cat => {
-      if (gruppi[cat.id] && gruppi[cat.id].length) {
-        const h = document.createElement("p");
-        h.className = "cat-header";
-        h.textContent = cat.emoji + " " + cat.nome;
-        container.appendChild(h);
-        gruppi[cat.id].sort((a,b) => a.summary.localeCompare(b.summary));
-        gruppi[cat.id].forEach(item => container.appendChild(creaRiga(item)));
-      }
-    });
-  }
-
-  if (fatti.length > 0) {
-    const sep = document.createElement("p");
-    sep.className = "cat-header";
-    sep.textContent = "Comprato (" + fatti.length + ")";
-    container.appendChild(sep);
-    fatti.forEach(item => container.appendChild(creaRiga(item, true)));
+    if(vistaAttiva()==="list")ridisegna();
+    aggiornaMetaUI();
+  }catch(e){
+    if(e.code==="UNAUTHORIZED") logoutPerPinErrato();
+    else if(!silent)toast("Non riesco ad aggiornare la lista.");
   }
 }
+function aggiornaMetaUI(){const r=document.getElementById("db-revision"),u=document.getElementById("db-updated");if(r)r.textContent=state.revision??"—";if(u)u.textContent=state.updatedAt?new Date(state.updatedAt).toLocaleString("it-IT"):"—"}
+function avviaPolling(){clearInterval(pollTimer);pollTimer=setInterval(()=>{if(document.visibilityState==="visible"&&pin&&!busyCount)caricaStato(true)},POLL_MS)}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&pin)caricaStato(true)});
 
-function creaRiga(item, completato) {
-  const row=document.createElement("div"); row.className="item"+(completato?" done":"");
-  const checkbox=document.createElement("input"); checkbox.type="checkbox"; checkbox.checked=!!completato; checkbox.onchange=()=>cambiaStato(item,checkbox.checked); row.appendChild(checkbox);
-  const name=document.createElement("span"); name.className="name"; name.textContent=item.summary; name.title=item.summary; row.appendChild(name);
-  if(!completato){
-    const cat=document.createElement("select"); cat.className="cat-select"; cat.title="Categoria"; CATEGORIE.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.emoji+" "+c.nome;if(c.id===item.cat)o.selected=true;cat.appendChild(o)}); cat.onchange=()=>cambiaCategoria(item,cat.value); row.appendChild(cat);
-    const q=document.createElement("div"); q.className="qty-compact"; const val=document.createElement("input"); val.type="number"; val.min="0.01"; val.step="any"; val.value=item.qty; val.onchange=()=>{const n=parseFloat(val.value);cambiaQuantita(item,0,isNaN(n)||n<=0?1:n)}; const un=document.createElement("select"); UNITA.forEach(u=>{const o=document.createElement("option");o.value=u;o.textContent=u;if(u===item.unit)o.selected=true;un.appendChild(o)}); un.onchange=()=>cambiaUnita(item,un.value); q.appendChild(val);q.appendChild(un);row.appendChild(q);
-    const b=document.createElement("button");b.type="button";b.className="barcode-btn";b.textContent="▥";b.title="Scansiona prodotto acquistato";b.onclick=()=>apriScanner(item);row.appendChild(b);
-  }else{const r=document.createElement("button");r.className="secondary restore-btn";r.textContent="Ripristina";r.onclick=()=>cambiaStato(item,false);row.appendChild(r)}
+async function verificaPin(){
+  const p=document.getElementById("pin-input").value.trim();
+  const err=document.getElementById("pin-error");err.classList.add("hidden");
+  if(!p)return;
+  pin=p;document.getElementById("status-box").classList.remove("hidden");document.getElementById("status-box").textContent="Verifica accesso…";
+  try{
+    await api("getState");
+    localStorage.setItem(PIN_STORAGE,p);
+    if(!impostazioni.chiediPinSempre)localStorage.setItem(TRUST_STORAGE,"1");
+    entraApp();
+  }catch(e){
+    pin="";localStorage.removeItem(PIN_STORAGE);localStorage.removeItem(TRUST_STORAGE);
+    err.textContent=e.code==="UNAUTHORIZED"?"PIN errato.":"Impossibile collegarsi al database.";
+    err.classList.remove("hidden");setSync("err","Non connesso");
+  }finally{document.getElementById("status-box").classList.add("hidden")}
+}
+function entraApp(){document.getElementById("pin-box").classList.add("hidden");document.getElementById("content").classList.remove("hidden");document.getElementById("settings-btn").classList.remove("hidden");caricaStato();caricaPendingDispensa();avviaPolling()}
+function logoutPerPinErrato(){pin="";localStorage.removeItem(PIN_STORAGE);localStorage.removeItem(TRUST_STORAGE);clearInterval(pollTimer);document.getElementById("content").classList.add("hidden");document.getElementById("settings-btn").classList.add("hidden");document.getElementById("pin-box").classList.remove("hidden")}
+function dimenticaAccesso(){localStorage.removeItem(PIN_STORAGE);localStorage.removeItem(TRUST_STORAGE);toast("Accesso dimenticato su questo dispositivo.");setTimeout(()=>location.reload(),500)}
+
+function disegnaTessere(){
+  const h=document.getElementById("tiles-container");if(!h)return;h.innerHTML="";
+  LISTE.forEach(l=>{const count=(state.listeAttive||[]).filter(x=>x.lista===l.id).length;const b=document.createElement("button");b.type="button";b.className="tile";b.dataset.entityId=l.id;b.onclick=()=>{activeListId=l.id;mostraVista("list")};b.innerHTML="<span class='emoji'>"+l.emoji+"</span><span class='name'>"+l.nome+"</span><span class='count'>"+count+"</span>";h.appendChild(b)});
+  applicaColoriTessere();
+}
+function itemsLista(){return (state.listeAttive||[]).filter(x=>x.lista===activeListId)}
+function compratiLista(){return (state.compratiSessioneAttuale||[]).filter(x=>x.lista===activeListId)}
+function ridisegna(){
+  const l=LISTE.find(x=>x.id===activeListId);document.getElementById("active-list-title").textContent=(l?.emoji||"")+" "+(l?.nome||activeListId);
+  const host=document.getElementById("items-container");host.innerHTML="";
+  const sort=document.getElementById("sort-select").value;
+  const items=itemsLista().slice();
+  if(sort==="alfabetico")items.sort((a,b)=>a.nome.localeCompare(b.nome,"it"));
+  else items.sort((a,b)=>{const ca=CATEGORIE.findIndex(c=>c.id===a.categoria),cb=CATEGORIE.findIndex(c=>c.id===b.categoria);return (ca-cb)||a.nome.localeCompare(b.nome,"it")});
+  if(!items.length)host.innerHTML="<div class='empty-note'>Nessun prodotto da acquistare.</div>";
+  if(sort==="categoria"){
+    CATEGORIE.forEach(cat=>{const group=items.filter(x=>(CATEGORIE.some(c=>c.id===x.categoria)?x.categoria:"Altro")===cat.id);if(!group.length)return;const s=document.createElement("div");s.className="category-section";s.innerHTML="<div class='category-title'>"+cat.emoji+" "+cat.nome+"</div>";group.forEach(x=>s.appendChild(creaRigaItem(x)));host.appendChild(s)})
+  }else items.forEach(x=>host.appendChild(creaRigaItem(x)));
+  renderComprati();
+  renderAcquisti();
+}
+function creaRigaItem(item){
+  const row=document.createElement("div");row.className="item";
+  const cb=document.createElement("input");cb.type="checkbox";cb.onchange=()=>{cb.disabled=true;acquistaManuale(item).finally(()=>cb.disabled=false)};row.appendChild(cb);
+  const name=document.createElement("div");name.className="name";name.textContent=item.nome;name.title=item.nome;row.appendChild(name);
+  const cat=document.createElement("select");cat.className="cat-select";cat.title="Categoria";CATEGORIE.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.emoji+" "+c.nome;o.selected=(c.id===item.categoria)||(c.id==="Altro"&&!CATEGORIE.some(z=>z.id===item.categoria));cat.appendChild(o)});cat.onchange=()=>aggiornaItem(item,{categoria:cat.value},true);row.appendChild(cat);
+  const q=document.createElement("div");q.className="qty-compact";const inp=document.createElement("input");inp.type="number";inp.min="0.01";inp.step="0.1";inp.value=item.quantita||1;inp.onchange=()=>aggiornaItem(item,{quantita:Number(inp.value)||1});const un=document.createElement("select");UNITA.forEach(u=>{const o=document.createElement("option");o.value=u;o.textContent=u;o.selected=u===item.unita;un.appendChild(o)});un.onchange=()=>aggiornaItem(item,{unita:un.value});q.appendChild(inp);q.appendChild(un);row.appendChild(q);
+  const scan=document.createElement("button");scan.type="button";scan.className="barcode-btn";scan.title="Scansiona barcode";scan.textContent="▥";scan.onclick=()=>apriScanner(item);row.appendChild(scan);
+  const del=document.createElement("button");del.type="button";del.className="danger-mini";del.title="Elimina";del.textContent="×";del.onclick=()=>eliminaItem(item);row.appendChild(del);
   return row;
 }
+async function aggiornaItem(item,patch,learn=false){try{await api("updateItem",{idVoce:item.idVoce,...patch});if(learn&&patch.categoria)imparaCategoria(item.nome,patch.categoria);await caricaStato(true)}catch(e){toast("Modifica non salvata.")}}
+async function eliminaItem(item){if(!confirm("Eliminare “"+item.nome+"” dalla lista?"))return;try{await api("deleteItem",{idVoce:item.idVoce});await caricaStato(true)}catch(e){toast("Non riesco a eliminare il prodotto.")}}
+async function aggiungiArticolo(){const input=document.getElementById("new-item-input"),nome=input.value.trim();if(!nome)return;input.disabled=true;try{await api("addItem",{lista:activeListId,nome,quantita:1,unita:"pz",categoria:categoriaAutomatica(nome),origine:"manuale"});input.value="";await caricaStato(true)}catch(e){toast("Non riesco ad aggiungere il prodotto.")}finally{input.disabled=false;input.focus()}}
+async function acquistaManuale(item){try{await api("purchaseItem",{idVoce:item.idVoce});await caricaStato(true);await caricaPendingDispensa()}catch(e){toast("Non riesco a segnare il prodotto come comprato.")}}
 
-// ── AZIONI ───────────────────────────────────────────────────
-// Un tasto (checkbox, stepper, select categoria...) porta con sé l'oggetto "item"
-// così com'era quando la riga è stata disegnata. Se nel frattempo è arrivato un
-// ricaricamento (dalla propria stessa azione o da un evento state_changed), quel
-// riferimento può essere superato. Prima di agire, si recupera sempre la versione
-// più recente dello stesso articolo (per uid) da listsData, quando disponibile.
-function itemAttuale(item, listId) {
-  const data = listsData[listId || activeListId];
-  if (!data) return item;
-  const trovato = data.items.find(i => i.uid === item.uid);
-  return trovato || item;
+function renderComprati(){
+  const h=document.getElementById("bought-container");const rows=compratiLista();
+  if(!state.sessioneAperta&&!rows.length){h.innerHTML="";return}
+  let html="<div class='bought-box'><div class='bought-head'><strong>✓ Comprato"+(rows.length?" ("+rows.length+")":"")+"</strong>";
+  if(state.sessioneAperta)html+="<button type='button' onclick='terminaSpesa()'>Termina la spesa attuale</button>";
+  html+="</div>";
+  if(!rows.length)html+="<div class='empty-note'>Nessun prodotto comprato in questa lista durante la sessione attuale.</div>";
+  else rows.slice().sort((a,b)=>String(b.dataAcquisto).localeCompare(String(a.dataAcquisto))).forEach(x=>{html+="<div class='bought-row'><div class='bought-name'>"+esc(x.voceListaOriginale)+"</div><button class='restore-btn' onclick='ripristinaAcquisto("+JSON.stringify(x.idAcquisto)+")'>Ripristina</button></div>"});
+  html+="</div>";h.innerHTML=html;
 }
+async function ripristinaAcquisto(id){try{await api("restorePurchase",{idAcquisto:id});await caricaStato(true);await caricaPendingDispensa()}catch(e){toast(e.message||"Ripristino non riuscito.")}}
+async function terminaSpesa(){if(!confirm("Terminare la sessione di spesa attuale? I prodotti comprati resteranno nello storico."))return;try{await api("closeSession");await caricaStato(true);toast("Sessione di spesa terminata.")}catch(e){toast("Non riesco a terminare la sessione.")}}
 
-function salvaMetaDati(item) {
-  if (!descrizioneSupportata) return Promise.resolve();
-  return inviaComando({
-    type: "call_service", domain: "todo", service: "update_item",
-    service_data: { item: item.uid, description: JSON.stringify({ qty: item.qty, cat: item.cat, unit: item.unit }) },
-    target: { entity_id: activeListId }
-  }).catch((err) => {
-    if (err === "connessione non aperta" || err === "connessione chiusa") {
-      throw err; // errore di connessione: deve far fallire visibilmente l'azione
-    }
-    log("Il campo descrizione non sembra supportato da questa lista: " + JSON.stringify(err));
-    descrizioneSupportata = false;
-  });
-}
+async function caricaPendingDispensa(){if(!pin)return;try{const j=await api("getPendingPantryTransfers");pendingDispensa=j.prodotti||[];renderAcquisti()}catch(e){}}
+function renderAcquisti(){const cnt=document.getElementById("purchases-count"),h=document.getElementById("purchases-body");if(!cnt||!h)return;cnt.textContent=pendingDispensa.length;if(!pendingDispensa.length){h.innerHTML="<p class='add-hint'>Nessun acquisto da trasferire.</p>";return}h.innerHTML=pendingDispensa.slice().reverse().map(x=>{const c=categoriaObj(x.categoria);return "<div class='purchase-row'><div class='purchase-main'><div class='purchase-name'>"+esc(x.nomeProdotto)+"</div><div class='purchase-meta'>"+esc((x.quantita||1)+" "+(x.unita||"pz")+" · "+c.nome+(x.marca?" · "+x.marca:"")+(x.formato?" · "+x.formato:""))+"</div></div><span class='purchase-mode "+(x.tipoDato==="generico"?"generic":"")+"'>"+(x.tipoDato==="barcode"?"▥ barcode":"✓ manuale")+"</span></div>"}).join("")}
 
-// delta: +1/-1 per lo stepper. Se valoreDigitato è passato, sovrascrive direttamente la quantità (input da tastiera).
-function cambiaQuantita(itemRif, delta, valoreDigitato) {
-  const item = itemAttuale(itemRif);
-  const vecchioValore = item.qty;
-  item.qty = valoreDigitato !== undefined ? valoreDigitato : Math.max(1, item.qty + delta);
-  ridisegna();
-  salvaMetaDati(item).catch(() => {
-    item.qty = vecchioValore;
-    ridisegna();
-    alert("Non salvato: connessione assente. Riprova quando torna online.");
-  });
-}
-
-function cambiaUnita(itemRif, nuovaUnita) {
-  const item = itemAttuale(itemRif);
-  const vecchiaUnita = item.unit;
-  item.unit = nuovaUnita;
-  salvaMetaDati(item).catch(() => {
-    item.unit = vecchiaUnita;
-    ridisegna();
-    alert("Non salvato: connessione assente. Riprova quando torna online.");
-  });
-}
-
-function cambiaCategoria(itemRif, nuovaCategoria) {
-  const item = itemAttuale(itemRif);
-  const vecchiaCat = item.cat;
-  item.cat = nuovaCategoria || "altro";
-  imparaCategoria(item.summary, item.cat);
-  ridisegna();
-  salvaMetaDati(item).catch(() => {
-    item.cat = vecchiaCat;
-    ridisegna();
-    alert("Non salvato: connessione assente. Riprova quando torna online.");
-  });
-}
-
-// ── ACQUISTI DA TRASFERIRE ──────────────────────────────────
-const ACQUISTI_KEY="lista_spesa_acquisti_v1"; let scannerStream=null,scannerTimer=null,scannerItem=null,scannerListId=null,scannerFood=null;
-function leggiAcquisti(){try{return JSON.parse(localStorage.getItem(ACQUISTI_KEY)||"[]")||[]}catch(e){return []}}
-function salvaAcquisti(a){localStorage.setItem(ACQUISTI_KEY,JSON.stringify(a));renderAcquisti()}
-function nomeLista(id){const l=LISTE.find(x=>x.id===id);return l?l.nome:id}
-function registraAcquisto(item,modalita,food,listId){const a=leggiAcquisti();const nutr=food?{kcal:food.kcal,proteine:food.proteine,carboidrati:food.carboidrati,zuccheri:food.zuccheri,grassi:food.grassi,saturi:food.saturi,fibre:food.fibre,sale:food.sale,fonte:"Open Food Facts"}:null;a.push({id:"a_"+Date.now()+"_"+Math.random().toString(36).slice(2,8),createdAt:new Date().toISOString(),sourceListId:listId,sourceListName:nomeLista(listId),sourceUid:item.uid,voceLista:item.summary,modalita,nomeAcquistato:food?food.nome:item.summary,marca:food?food.marca:"",barcode:food?food.barcode:"",formato:food?food.formato:"",qty:item.qty,unit:item.unit,cat:item.cat,nutr,trasferito:false});salvaAcquisti(a)}
-function rimuoviUltimoAcquisto(item,listId){const a=leggiAcquisti();for(let i=a.length-1;i>=0;i--){if(!a[i].trasferito&&a[i].sourceUid===item.uid&&a[i].sourceListId===listId){a.splice(i,1);break}}salvaAcquisti(a)}
-function escAcq(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
-function renderAcquisti(){const cnt=document.getElementById("purchases-count"),body=document.getElementById("purchases-body");if(!cnt||!body)return;const a=leggiAcquisti().filter(x=>!x.trasferito);cnt.textContent=a.length;if(!a.length){body.innerHTML='<p class="add-hint">Nessun acquisto registrato.</p>';return}body.innerHTML=a.slice().reverse().map(x=>'<div class="purchase-row"><div class="purchase-main"><div class="purchase-name">'+escAcq(x.nomeAcquistato)+'</div><div class="purchase-meta">'+escAcq(x.qty+' '+x.unit+' · '+(CATEGORIE.find(c=>c.id===x.cat)?.nome||x.cat)+(x.marca?' · '+x.marca:'')+(x.formato?' · '+x.formato:''))+'</div></div><span class="purchase-mode">'+(x.modalita==='barcode'?'▥ barcode':'✓ manuale')+'</span></div>').join('')}
-
-function cambiaStato(itemRif, completato) {
-  const listId = activeListId;
-  const item = itemAttuale(itemRif, listId);
-  inviaComando({
-    type: "call_service", domain: "todo", service: "update_item",
-    service_data: { item: item.uid, status: completato ? "completed" : "needs_action" },
-    target: { entity_id: listId }
-  }).then(() => caricaLista(listId)).then(() => {
-    disegnaTessere();
-    if (activeListId === listId) ridisegna();
-    // Lo storico è un effetto collaterale e non partecipa mai alla gestione della lista.
-    if (completato) registraAcquisto(item, "manuale", null, listId);
-    else rimuoviUltimoAcquisto(item, listId);
-  }).catch((err) => log("Errore cambio stato: " + JSON.stringify(err)));
-}
-
-function aggiungiArticolo() {
-  const input = document.getElementById("new-item-input");
-  const testo = input.value.trim();
-  if (!testo) return;
-  const listId = activeListId;
-  const categoriaIniziale = categoriaAutomatica(testo);
-
-  // Un'unica chiamata: il nome e i metadati (qty/cat/unit) vengono scritti insieme,
-  // così l'articolo non esiste mai, nemmeno per un istante, senza i suoi dati.
-  // In precedenza si usavano due chiamate separate (add_item, poi update_item per la
-  // descrizione): quella finestra di tempo permetteva a un evento state_changed di
-  // HA di innescare un ricaricamento concorrente proprio a metà dell'operazione.
-  const datiIniziali = descrizioneSupportata
-    ? { item: testo, description: JSON.stringify({ qty: 1, cat: categoriaIniziale, unit: "pz" }) }
-    : { item: testo };
-
-  inviaComando({
-    type: "call_service", domain: "todo", service: "add_item",
-    service_data: datiIniziali,
-    target: { entity_id: listId }
-  }).then(() => {
-    input.value = "";
-    return caricaLista(listId);
-  }).then(() => {
-    disegnaTessere();
-    if (activeListId === listId) ridisegna();
-  }).catch((err) => {
-    // Se il servizio non accetta "description" direttamente in add_item (integrazione
-    // che non lo supporta), ripieghiamo su una singola add_item senza metadati:
-    // l'articolo resterà "Non categorizzato"/qty 1 di default, correggibile a mano.
-    if (descrizioneSupportata) {
-      log("add_item con description fallito, ripiego su add_item semplice: " + JSON.stringify(err));
-      descrizioneSupportata = false;
-      inviaComando({
-        type: "call_service", domain: "todo", service: "add_item",
-        service_data: { item: testo },
-        target: { entity_id: listId }
-      }).then(() => { input.value = ""; return caricaLista(listId); })
-        .then(() => { disegnaTessere(); if (activeListId === listId) ridisegna(); })
-        .catch((err2) => log("Errore aggiunta (ripiego): " + JSON.stringify(err2)));
-    } else {
-      log("Errore aggiunta: " + JSON.stringify(err));
-    }
-  });
-}
-
-// ── BARCODE / OPEN FOOD FACTS ───────────────────────────────
 function nNum(v){const x=Number(v);return Number.isFinite(x)?x:null}
-function normalizeOFF(json,code){const p=(json&&json.product)||json||{},z=p.nutriments||{};return{barcode:String(p.code||code),nome:String(p.product_name_it||p.product_name||p.generic_name_it||p.generic_name||("Prodotto "+code)).trim(),marca:String(p.brands||"").trim(),formato:String(p.quantity||"").trim(),kcal:nNum(z["energy-kcal_100g"]),proteine:nNum(z.proteins_100g),carboidrati:nNum(z.carbohydrates_100g),zuccheri:nNum(z.sugars_100g),grassi:nNum(z.fat_100g),saturi:nNum(z["saturated-fat_100g"]),fibre:nNum(z.fiber_100g),sale:nNum(z.salt_100g)}}
-function setScanStatus(t){const e=document.getElementById("scan-status");if(e)e.textContent=t}
+function normalizeOFF(json,code){const p=(json&&json.product)||json||{},z=p.nutriments||{};return{barcode:String(p.code||code),nomeProdotto:String(p.product_name_it||p.product_name||p.generic_name_it||p.generic_name||("Prodotto "+code)).trim(),marca:String(p.brands||"").trim(),formato:String(p.quantity||"").trim(),kcal100:nNum(z["energy-kcal_100g"]),proteine100:nNum(z.proteins_100g),carboidrati100:nNum(z.carbohydrates_100g),zuccheri100:nNum(z.sugars_100g),grassi100:nNum(z.fat_100g),saturi100:nNum(z["saturated-fat_100g"]),fibre100:nNum(z.fiber_100g),sale100:nNum(z.salt_100g)}}
+function setScanStatus(t){document.getElementById("scan-status").textContent=t}
 function fmtN(v,d=1){return v==null?"—":Number(v).toFixed(d).replace(".",",")}
-function renderScanResult(f){const h=document.getElementById("scan-result");h.classList.remove("hidden");h.innerHTML='<h4>'+escAcq(f.nome)+'</h4><div class="brand">'+escAcq([f.marca,f.formato,f.barcode].filter(Boolean).join(' · '))+'</div><div class="scan-nutr"><div><b>'+fmtN(f.kcal,0)+'</b><span>kcal/100g</span></div><div><b>'+fmtN(f.proteine)+'</b><span>proteine</span></div><div><b>'+fmtN(f.carboidrati)+'</b><span>carboidrati</span></div><div><b>'+fmtN(f.grassi)+'</b><span>grassi</span></div></div><div class="scan-actions"><button class="secondary" type="button" onclick="riavviaScanner()">Riprova</button><button type="button" onclick="confermaBarcode()">✓ Comprato</button></div>'}
-async function cercaBarcode(raw){const code=String(raw||"").replace(/\D/g,"");if(!/^\d{6,18}$/.test(code)){setScanStatus("Codice non valido.");return}stopScannerCamera();setScanStatus("Cerco "+code+" su Open Food Facts…");try{const u='https://world.openfoodfacts.org/api/v3/product/'+encodeURIComponent(code)+'?lc=it&cc=it&fields=code,product_name,product_name_it,generic_name,generic_name_it,brands,quantity,nutriments';const r=await fetch(u,{headers:{Accept:'application/json'}});if(r.status===404)throw new Error('Prodotto non trovato');if(!r.ok)throw new Error('Errore Open Food Facts '+r.status);scannerFood=normalizeOFF(await r.json(),code);renderScanResult(scannerFood);setScanStatus("Prodotto trovato. Conferma per segnarlo come comprato.")}catch(e){scannerFood=null;setScanStatus(e.message||"Ricerca non riuscita")}}
-async function apriScanner(item){scannerItem=item;scannerListId=activeListId;scannerFood=null;document.getElementById("scan-title").textContent=item.summary;document.getElementById("scan-result").classList.add("hidden");document.getElementById("scan-result").innerHTML="";document.getElementById("scan-manual-code").value="";document.getElementById("barcode-overlay").classList.remove("hidden");await startScannerCamera()}
-async function startScannerCamera(){stopScannerCamera();setScanStatus("Inquadra il codice a barre della confezione.");if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setScanStatus("Apri la preview da HTTPS oppure digita il barcode.");return}try{scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});const v=document.getElementById("scan-video");v.srcObject=scannerStream;await v.play();if("BarcodeDetector" in window){const formats=await BarcodeDetector.getSupportedFormats();const wanted=["ean_13","ean_8","upc_a","upc_e","code_128"].filter(x=>formats.includes(x));const det=new BarcodeDetector(wanted.length?{formats:wanted}:undefined);scannerTimer=setInterval(async()=>{try{if(v.readyState<2)return;const codes=await det.detect(v);if(codes&&codes[0]&&codes[0].rawValue){clearInterval(scannerTimer);scannerTimer=null;cercaBarcode(codes[0].rawValue)}}catch(e){}},350)}else setScanStatus("Il browser non supporta la lettura automatica: digita il barcode.")}catch(e){setScanStatus("Non riesco ad aprire la fotocamera. Controlla il permesso del browser oppure digita il barcode.")}}
+function renderScanResult(f){const h=document.getElementById("scan-result");h.classList.remove("hidden");h.innerHTML="<h4>"+esc(f.nomeProdotto)+"</h4><div class='brand'>"+esc([f.marca,f.formato,f.barcode].filter(Boolean).join(" · "))+"</div><div class='scan-nutr'><div><b>"+fmtN(f.kcal100,0)+"</b><span>kcal/100g</span></div><div><b>"+fmtN(f.proteine100)+"</b><span>proteine</span></div><div><b>"+fmtN(f.carboidrati100)+"</b><span>carboidrati</span></div><div><b>"+fmtN(f.grassi100)+"</b><span>grassi</span></div></div><div class='scan-actions'><button class='secondary' type='button' onclick='riavviaScanner()'>Riprova</button><button type='button' onclick='confermaBarcode()'>✓ Comprato</button></div>"}
+async function cercaBarcode(raw){const code=String(raw||"").replace(/\D/g,"");if(!/^\d{6,18}$/.test(code)){setScanStatus("Codice non valido.");return}stopScannerCamera();setScanStatus("Cerco "+code+" su Open Food Facts…");try{const u="https://world.openfoodfacts.org/api/v3/product/"+encodeURIComponent(code)+"?lc=it&cc=it&fields=code,product_name,product_name_it,generic_name,generic_name_it,brands,quantity,nutriments";const r=await fetch(u,{headers:{Accept:"application/json"}});if(!r.ok)throw new Error(r.status===404?"Prodotto non trovato":"Errore Open Food Facts "+r.status);scannerFood=normalizeOFF(await r.json(),code);renderScanResult(scannerFood);setScanStatus("Prodotto trovato. Conferma per segnarlo come comprato.")}catch(e){scannerFood=null;setScanStatus(e.message||"Ricerca non riuscita")}}
+async function apriScanner(item){scannerItem=item;scannerFood=null;document.getElementById("scan-title").textContent=item.nome;document.getElementById("scan-result").classList.add("hidden");document.getElementById("scan-result").innerHTML="";document.getElementById("scan-manual-code").value="";document.getElementById("barcode-overlay").classList.remove("hidden");await startScannerCamera()}
+async function startScannerCamera(){stopScannerCamera();setScanStatus("Inquadra il codice a barre della confezione.");if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setScanStatus("Apri la pagina da HTTPS oppure digita il barcode.");return}try{scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});const v=document.getElementById("scan-video");v.srcObject=scannerStream;await v.play();if("BarcodeDetector" in window){const fm=await BarcodeDetector.getSupportedFormats();const wanted=["ean_13","ean_8","upc_a","upc_e","code_128"].filter(x=>fm.includes(x));const det=new BarcodeDetector(wanted.length?{formats:wanted}:undefined);scannerTimer=setInterval(async()=>{try{if(v.readyState<2)return;const codes=await det.detect(v);if(codes?.[0]?.rawValue){clearInterval(scannerTimer);scannerTimer=null;cercaBarcode(codes[0].rawValue)}}catch(e){}},350)}else setScanStatus("Il browser non supporta la lettura automatica: digita il barcode.")}catch(e){setScanStatus("Non riesco ad aprire la fotocamera. Controlla il permesso oppure digita il barcode.")}}
 function stopScannerCamera(){if(scannerTimer){clearInterval(scannerTimer);scannerTimer=null}if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null}const v=document.getElementById("scan-video");if(v)v.srcObject=null}
 function chiudiScanner(){stopScannerCamera();document.getElementById("barcode-overlay").classList.add("hidden");scannerItem=null;scannerFood=null}
 function riavviaScanner(){scannerFood=null;document.getElementById("scan-result").classList.add("hidden");document.getElementById("scan-result").innerHTML="";startScannerCamera()}
-function confermaBarcode(){
-  if(!scannerItem||!scannerFood)return;
-  const item=scannerItem,food=scannerFood,listId=scannerListId;
-  chiudiScanner();
-  inviaComando({
-    type:"call_service",domain:"todo",service:"update_item",
-    service_data:{item:item.uid,status:"completed"},target:{entity_id:listId}
-  }).then(()=>caricaLista(listId)).then(()=>{
-    registraAcquisto(item,"barcode",food,listId);
-    disegnaTessere();
-    if(activeListId===listId)ridisegna();
-  }).catch(err=>{
-    log("Errore acquisto barcode: "+JSON.stringify(err));
-    alert("Non riesco a segnare il prodotto come comprato. Riprova.");
-  });
-}
+async function confermaBarcode(){if(!scannerItem||!scannerFood)return;const item=scannerItem,food=scannerFood;chiudiScanner();try{await api("purchaseItem",{idVoce:item.idVoce,prodottoEffettivo:food});await caricaStato(true);await caricaPendingDispensa();toast("Acquisto registrato con barcode.")}catch(e){toast("Non riesco a registrare l'acquisto.")}}
 
-window.onload = () => {
-  document.getElementById("version-tag").textContent = APP_VERSION;
-  caricaImpostazioni();
-  applicaColori();
-  const sv = document.getElementById("settings-version"); if (sv) sv.textContent = APP_VERSION;
-
-  if (pinGiaRicordato()) {
-    document.getElementById("pin-box").classList.add("hidden");
-    avviaApp();
-  }
-  renderAcquisti();
-  // altrimenti resta visibile la schermata PIN, già mostrata di default
-};
+window.addEventListener("load",()=>{
+  document.getElementById("version-tag").textContent=APP_VERSION;
+  caricaImpostazioni();applicaColori();
+  document.getElementById("settings-version").textContent=APP_VERSION;
+  const saved=localStorage.getItem(PIN_STORAGE);
+  const trusted=localStorage.getItem(TRUST_STORAGE)==="1";
+  if(saved&&trusted&&!impostazioni.chiediPinSempre){pin=saved;entraApp()}else{document.getElementById("pin-box").classList.remove("hidden")}
+});
 </script>
-<div id="barcode-overlay" class="scan-overlay hidden" role="dialog" aria-modal="true"><div class="scan-panel"><div class="scan-head"><div><div class="settings-kicker">ACQUISTO REALE</div><h3 id="scan-title">Scansiona il prodotto</h3></div><button class="scan-close" type="button" onclick="chiudiScanner()">×</button></div><div class="scan-video-wrap"><video id="scan-video" class="scan-video" playsinline muted></video><div class="scan-guide"></div></div><div id="scan-status" class="scan-status">Inquadra il codice a barre della confezione.</div><div class="scan-manual"><input id="scan-manual-code" inputmode="numeric" placeholder="Oppure digita il barcode"><button type="button" onclick="cercaBarcode(document.getElementById('scan-manual-code').value)">Cerca</button></div><div id="scan-result" class="scan-result hidden"></div></div></div>
-
 </body>
 </html>
