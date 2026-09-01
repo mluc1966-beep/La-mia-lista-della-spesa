@@ -272,6 +272,76 @@
   .pin-box input{letter-spacing:.18em;text-align:center}
   .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:10000;max-width:min(92vw,520px);padding:11px 14px;border-radius:12px;background:#222;color:#fff;font-size:.86rem;box-shadow:0 8px 30px rgba(0,0,0,.25)}
   .toast.hidden{display:none}
+
+  /* v0.5: rifinitura estetica lista reale */
+  #app-header{padding:.68rem 1rem!important;min-height:70px}
+  #app-header>div:first-child{min-width:0;gap:10px!important;align-items:center!important}
+  #app-header h1{font-size:1.2rem!important;line-height:1.08;max-width:250px}
+  #version-tag{font-size:.62rem!important;line-height:1.15;white-space:normal!important;max-width:220px}
+  #settings-btn{width:40px!important;height:40px!important;flex:0 0 40px}
+
+  .home-intro{margin:2px 2px 12px!important}
+  .home-intro h2{font-size:1.45rem!important}
+  .home-intro p{font-size:.88rem!important}
+  .tiles{gap:12px!important}
+  .tile{min-height:154px!important;padding:13px 10px!important;align-items:center!important;text-align:center!important;justify-content:center!important;gap:7px}
+  .tile .emoji{font-size:2.8rem!important;line-height:1.05}
+  .tile .name{font-size:1rem!important;margin:2px 0 0!important}
+  .tile .count{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:2px auto 0!important;font-size:1.18rem!important;color:#fff!important;background:var(--ui-accent)!important;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+  .tile .count::after{content:none!important}
+
+  .list-screen-head{grid-template-columns:auto minmax(0,1fr)!important;grid-template-rows:auto auto;align-items:center!important;column-gap:10px!important;row-gap:2px!important;margin-bottom:7px!important}
+  .list-screen-head .back-btn{grid-column:1;grid-row:1 / span 2}
+  .list-screen-title-wrap{grid-column:2;grid-row:1;overflow:visible!important}
+  .list-screen-head .list-title{font-size:1.52rem!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.08;overflow-wrap:anywhere}
+  .list-screen-head .sort-select{grid-column:2;grid-row:2;justify-self:end;width:auto!important;max-width:112px!important;font-size:.72rem!important;padding:4px 7px!important;min-height:30px;margin-top:3px}
+
+  .sticky-add-card{position:sticky;top:70px;z-index:40;margin:0 0 10px!important;padding:8px!important;background:color-mix(in srgb,var(--ui-card) 94%,transparent)!important;backdrop-filter:blur(8px)}
+  .sticky-add-card .add-row{gap:6px!important}
+  .sticky-add-card .add-row input{min-width:0;min-height:44px!important}
+  .sticky-add-card .add-row button{width:44px!important;min-width:44px!important;min-height:44px!important;padding:0!important}
+  .voice-add-btn svg{width:21px;height:21px;fill:currentColor;display:block;margin:auto}
+  .voice-add-btn.listening{background:#b84c3a!important;animation:voicePulse 1s ease-in-out infinite}
+  @keyframes voicePulse{50%{transform:scale(.92);box-shadow:0 0 0 6px rgba(184,76,58,.16)}}
+
+  .category-section{margin:8px 0 11px}
+  .category-section>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 6px;padding:4px 3px;color:var(--ui-text);font-size:.9rem;font-weight:650}
+  .category-section>summary::-webkit-details-marker{display:none}
+  .category-title-main{display:flex;align-items:center;gap:7px;min-width:0}
+  .category-title-icon{width:25px;height:25px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--ui-card);border:1px solid var(--ui-border);font-size:.88rem;flex:0 0 25px}
+  .category-title-label{min-width:0;line-height:1.15}
+  .category-title-meta{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+  .category-count{min-width:25px;height:25px;padding:0 7px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:var(--ui-card);border:1px solid var(--ui-border);color:var(--ui-accent2);font-size:.72rem;font-weight:800}
+  .category-chevron{font-size:1rem;color:var(--ui-text3);transition:transform .18s}
+  .category-section:not([open]) .category-chevron{transform:rotate(-90deg)}
+
+  .item{overflow:visible!important;min-height:54px}
+  .item .name{white-space:normal!important;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden!important;text-overflow:ellipsis;line-height:1.15!important;overflow-wrap:anywhere}
+  .item.buying{pointer-events:none;animation:moveToBought .28s ease forwards}
+  @keyframes moveToBought{to{opacity:0;transform:translateX(-28px) scale(.98);max-height:0;margin:0;padding-top:0;padding-bottom:0}}
+  .item .cat-select{border-radius:50%!important;width:38px!important;max-width:38px!important;min-width:38px!important;height:38px;padding:4px 1px!important}
+  .barcode-btn svg{width:23px;height:23px;display:block;margin:auto;fill:var(--ui-accent2)}
+  .danger-mini{font-size:20px!important}
+
+  .bought-box{margin-top:12px;background:var(--ui-card);border:1px solid var(--ui-border);border-radius:16px;overflow:hidden}
+  .bought-box>summary{list-style:none;cursor:pointer;padding:13px 14px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .bought-box>summary::-webkit-details-marker{display:none}
+  .bought-summary-meta{display:flex;align-items:center;gap:7px}
+  .section-count{min-width:27px;height:27px;padding:0 7px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:var(--ui-bg2);border:1px solid var(--ui-border);font-size:.75rem;color:var(--ui-accent2)}
+  .bought-box[open] .purchases-arrow{transform:rotate(180deg)}
+  .bought-body{border-top:1px solid var(--ui-border);background:var(--ui-bg2)}
+  .bought-actions{padding:9px 11px;border-bottom:1px solid var(--ui-border);display:flex;justify-content:flex-end}
+
+  @media(max-width:520px){
+    #app-header h1{max-width:180px}
+    #version-tag{max-width:150px}
+    .item{gap:4px!important;padding:8px 7px!important}
+    .item .name{font-size:.94rem!important}
+    .qty-compact input{width:40px!important}
+    .qty-compact select{width:43px!important}
+    .barcode-btn{width:35px!important;min-width:35px!important}
+    .danger-mini{width:35px!important;min-width:35px!important}
+  }
 </style>
 
 </head>
@@ -322,16 +392,16 @@
           </select>
         </div>
 
-        <div id="items-container"></div>
-
-        <div class="add-card">
+        <div class="add-card sticky-add-card">
           <div class="add-row">
             <input type="text" id="new-item-input" placeholder="Aggiungi un prodotto" autocomplete="off"
                    onkeypress="if(event.key==='Enter') aggiungiArticolo()">
+            <button type="button" class="voice-add-btn" onclick="dettaProdotto()" aria-label="Detta un prodotto" title="Detta un prodotto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a1 1 0 0 0-2 0 4 4 0 0 1-8 0 1 1 0 0 0-2 0 6 6 0 0 0 5 5.91V20H8.5a1 1 0 1 0 0 2h7a1 1 0 1 0 0-2H13v-3.09A6 6 0 0 0 18 11Z"/></svg></button>
             <button onclick="aggiungiArticolo()" aria-label="Aggiungi">+</button>
           </div>
-          <p class="add-hint">Gli inserimenti manuali vanno solo nel database dell'app e non vengono inviati ad Alexa.</p>
         </div>
+
+        <div id="items-container"></div>
 
         <div id="bought-container"></div>
 
@@ -385,10 +455,6 @@
         <p class="settings-version">Versione <span id="settings-version"></span></p>
       </section>
 
-      <details id="debug-wrap" class="debug-details">
-        <summary>Diagnostica</summary>
-        <div id="debug-log" style="background:#111;color:#7CFC9A;font-family:monospace;font-size:11px;padding:10px;border-radius:8px;max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:8px;"></div>
-      </details>
     </div>
   </main>
 </div>
@@ -413,7 +479,7 @@
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbwlUOrHMLFX164q7dtYaGWkC8JTjZvK_44c7M9JjGU3v_kvRwebjifqNCu6T3dzTKY3/exec";
-const APP_VERSION = "v0.5 preview collegamento Dispensa reale";
+const APP_VERSION = "v0.5 preview estetica + Dispensa reale";
 const PANTRY_QUEUE_KEY = "dispensa_ricevuti_v61";
 const PIN_STORAGE = "lista_spesa_app_pin_v1";
 const TRUST_STORAGE = "lista_spesa_device_trusted_v1";
@@ -518,7 +584,7 @@ function caricaImpostazioni(){
 }
 function contrastText(hex){const h=(hex||"#4C7CA6").replace("#","");const n=parseInt(h.length===3?h.split("").map(x=>x+x).join(""):h,16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (.299*r+.587*g+.114*b)>165?"#151515":"#fff"}
 function applicaColori(){document.body.className=impostazioni.themeId||"sepia";applicaColoriTessere()}
-function applicaColoriTessere(){document.querySelectorAll(".tile").forEach(tile=>{const id=tile.dataset.entityId,c=impostazioni.liste[id]||DEFAULT_COLORS.liste[id],t=contrastText(c);tile.style.setProperty("background",c,"important");tile.style.setProperty("color",t,"important");tile.style.setProperty("border-color",c,"important");tile.querySelectorAll(".name,.count,.emoji").forEach(el=>el.style.setProperty("color",t,"important"))})}
+function applicaColoriTessere(){document.querySelectorAll(".tile").forEach(tile=>{const id=tile.dataset.entityId,c=impostazioni.liste[id]||DEFAULT_COLORS.liste[id];tile.style.setProperty("background","var(--ui-card)","important");tile.style.setProperty("color",c,"important");tile.style.setProperty("border-color",c+"55","important");const name=tile.querySelector(".name");if(name)name.style.setProperty("color",c,"important");const count=tile.querySelector(".count");if(count){count.style.setProperty("background",c,"important");count.style.setProperty("color",contrastText(c),"important")}})}
 function salvaImpostazioni(){const cb=document.getElementById("chiedi-pin-sempre");if(cb)impostazioni.chiediPinSempre=cb.checked;localStorage.setItem(SETTINGS_STORAGE,JSON.stringify(impostazioni));applicaColori()}
 function renderTemi(){const h=document.getElementById("theme-grid");h.innerHTML="";TEMI.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="theme-opt"+(impostazioni.themeId===t.id?" on":"");b.onclick=()=>{impostazioni.themeId=t.id;salvaImpostazioni();renderTemi()};b.innerHTML="<strong>"+esc(t.nome)+"</strong><div class='theme-dots'>"+t.c.map(x=>"<span class='theme-dot' style='background:"+x+"'></span>").join("")+"</div>";h.appendChild(b)})}
 function renderColoriListe(){const h=document.getElementById("color-liste-container");h.innerHTML="";LISTE.forEach(l=>{const c=impostazioni.liste[l.id];const row=document.createElement("div");row.className="list-color-row";const head=document.createElement("div");head.className="list-color-head";head.innerHTML="<div class='current-color' style='background:"+c+"'></div><div class='list-color-label'>"+l.emoji+" "+l.nome+"</div>";const pal=document.createElement("div");pal.className="windows-palette";WINDOWS_LIST_COLORS.forEach(x=>{const b=document.createElement("button");b.type="button";b.className="color-swatch"+(x.toLowerCase()===c.toLowerCase()?" selected":"");b.style.background=x;b.onclick=()=>{impostazioni.liste[l.id]=x;salvaImpostazioni();renderColoriListe();disegnaTessere()};pal.appendChild(b)});row.appendChild(head);row.appendChild(pal);h.appendChild(row)})}
@@ -595,18 +661,18 @@ function ridisegna(){
   else items.sort((a,b)=>{const ca=CATEGORIE.findIndex(c=>c.id===a.categoria),cb=CATEGORIE.findIndex(c=>c.id===b.categoria);return (ca-cb)||a.nome.localeCompare(b.nome,"it")});
   if(!items.length)host.innerHTML="<div class='empty-note'>Nessun prodotto da acquistare.</div>";
   if(sort==="categoria"){
-    CATEGORIE.forEach(cat=>{const group=items.filter(x=>(CATEGORIE.some(c=>c.id===x.categoria)?x.categoria:"Altro")===cat.id);if(!group.length)return;const s=document.createElement("div");s.className="category-section";s.innerHTML="<div class='category-title'>"+cat.emoji+" "+cat.nome+"</div>";group.forEach(x=>s.appendChild(creaRigaItem(x)));host.appendChild(s)})
+    CATEGORIE.forEach(cat=>{const group=items.filter(x=>(CATEGORIE.some(c=>c.id===x.categoria)?x.categoria:"Altro")===cat.id);if(!group.length)return;const s=document.createElement("details");s.className="category-section";s.open=true;const summary=document.createElement("summary");summary.innerHTML="<span class='category-title-main'><span class='category-title-icon'>"+cat.emoji+"</span><span class='category-title-label'>"+esc(cat.nome)+"</span></span><span class='category-title-meta'><span class='category-count'>"+group.length+"</span><span class='category-chevron'>⌄</span></span>";s.appendChild(summary);const body=document.createElement("div");body.className="category-items";group.forEach(x=>body.appendChild(creaRigaItem(x)));s.appendChild(body);host.appendChild(s)})
   }else items.forEach(x=>host.appendChild(creaRigaItem(x)));
   renderComprati();
   renderAcquisti();
 }
 function creaRigaItem(item){
   const row=document.createElement("div");row.className="item";
-  const cb=document.createElement("input");cb.type="checkbox";cb.onchange=()=>{cb.disabled=true;acquistaManuale(item).finally(()=>cb.disabled=false)};row.appendChild(cb);
+  const cb=document.createElement("input");cb.type="checkbox";cb.onchange=()=>acquistaConAnimazione(item,row,cb);row.appendChild(cb);
   const name=document.createElement("div");name.className="name";name.textContent=item.nome;name.title=item.nome;row.appendChild(name);
   const cat=document.createElement("select");cat.className="cat-select";cat.title="Categoria";CATEGORIE.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.emoji+" "+c.nome;o.selected=(c.id===item.categoria)||(c.id==="Altro"&&!CATEGORIE.some(z=>z.id===item.categoria));cat.appendChild(o)});cat.onchange=()=>aggiornaItem(item,{categoria:cat.value},true);row.appendChild(cat);
   const q=document.createElement("div");q.className="qty-compact";const inp=document.createElement("input");inp.type="number";inp.min="0.01";inp.step="0.1";inp.value=item.quantita||1;inp.onchange=()=>aggiornaItem(item,{quantita:Number(inp.value)||1});const un=document.createElement("select");UNITA.forEach(u=>{const o=document.createElement("option");o.value=u;o.textContent=u;o.selected=u===item.unita;un.appendChild(o)});un.onchange=()=>aggiornaItem(item,{unita:un.value});q.appendChild(inp);q.appendChild(un);row.appendChild(q);
-  const scan=document.createElement("button");scan.type="button";scan.className="barcode-btn";scan.title="Scansiona barcode";scan.textContent="▥";scan.onclick=()=>apriScanner(item);row.appendChild(scan);
+  const scan=document.createElement("button");scan.type="button";scan.className="barcode-btn";scan.title="Scansiona barcode";scan.setAttribute("aria-label","Scansiona barcode");scan.innerHTML='<svg viewBox="0 0 28 24" aria-hidden="true"><rect x="1" y="2" width="2" height="20"/><rect x="5" y="2" width="1" height="20"/><rect x="8" y="2" width="3" height="20"/><rect x="13" y="2" width="1" height="20"/><rect x="16" y="2" width="2" height="20"/><rect x="20" y="2" width="1" height="20"/><rect x="23" y="2" width="4" height="20"/></svg>';scan.onclick=()=>apriScanner(item);row.appendChild(scan);
   const del=document.createElement("button");del.type="button";del.className="danger-mini";del.title="Elimina";del.textContent="×";del.onclick=()=>eliminaItem(item);row.appendChild(del);
   return row;
 }
@@ -614,16 +680,30 @@ async function aggiornaItem(item,patch,learn=false){try{await api("updateItem",{
 async function eliminaItem(item){if(!confirm("Eliminare “"+item.nome+"” dalla lista?"))return;try{await api("deleteItem",{idVoce:item.idVoce});await caricaStato(true)}catch(e){toast("Non riesco a eliminare il prodotto.")}}
 async function aggiungiArticolo(){const input=document.getElementById("new-item-input"),nome=input.value.trim();if(!nome)return;input.disabled=true;try{await api("addItem",{lista:activeListId,nome,quantita:1,unita:"pz",categoria:categoriaAutomatica(nome),origine:"manuale"});input.value="";await caricaStato(true)}catch(e){toast("Non riesco ad aggiungere il prodotto.")}finally{input.disabled=false;input.focus()}}
 async function acquistaManuale(item){try{await api("purchaseItem",{idVoce:item.idVoce});await caricaStato(true);await caricaPendingDispensa()}catch(e){toast("Non riesco a segnare il prodotto come comprato.")}}
+async function acquistaConAnimazione(item,row,cb){cb.disabled=true;row.classList.add("buying");await new Promise(r=>setTimeout(r,240));try{await acquistaManuale(item)}finally{if(document.body.contains(row)){row.classList.remove("buying");cb.checked=false;cb.disabled=false}}}
+
+let voiceRecognition=null;
+function dettaProdotto(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast("La dettatura vocale non è supportata da questo browser.");return;}
+  if(voiceRecognition){try{voiceRecognition.stop()}catch(e){}voiceRecognition=null;return;}
+  const btn=document.querySelector(".voice-add-btn"),input=document.getElementById("new-item-input");
+  const rec=new SR();voiceRecognition=rec;rec.lang="it-IT";rec.interimResults=false;rec.maxAlternatives=1;
+  rec.onstart=()=>{btn?.classList.add("listening");toast("Parla ora…")};
+  rec.onresult=e=>{const text=String(e.results?.[0]?.[0]?.transcript||"").trim();if(text){input.value=text.charAt(0).toUpperCase()+text.slice(1);input.focus()}};
+  rec.onerror=e=>{if(e.error!=="aborted")toast("Non ho capito. Riprova.")};
+  rec.onend=()=>{voiceRecognition=null;btn?.classList.remove("listening")};
+  try{rec.start()}catch(e){voiceRecognition=null;btn?.classList.remove("listening");toast("Microfono non disponibile.")}
+}
 
 function renderComprati(){
   const h=document.getElementById("bought-container");const rows=compratiLista();
   if(!state.sessioneAperta&&!rows.length){h.innerHTML="";return}
-  let html="<div class='bought-box'><div class='bought-head'><strong>✓ Comprato"+(rows.length?" ("+rows.length+")":"")+"</strong>";
-  if(state.sessioneAperta)html+="<button type='button' onclick='terminaSpesa()'>Termina la spesa attuale</button>";
-  html+="</div>";
+  let html="<details class='bought-box'><summary><span>✓ Comprati</span><span class='bought-summary-meta'><span class='section-count'>"+rows.length+"</span><span class='purchases-arrow'>⌄</span></span></summary><div class='bought-body'>";
+  if(state.sessioneAperta)html+="<div class='bought-actions'><button type='button' onclick='terminaSpesa()'>Termina la spesa attuale</button></div>";
   if(!rows.length)html+="<div class='empty-note'>Nessun prodotto comprato in questa lista durante la sessione attuale.</div>";
   else rows.slice().sort((a,b)=>String(b.dataAcquisto).localeCompare(String(a.dataAcquisto))).forEach(x=>{html+="<div class='bought-row'><div class='bought-name'>"+esc(x.voceListaOriginale)+"</div><button class='restore-btn' onclick='ripristinaAcquisto("+JSON.stringify(x.idAcquisto)+")'>Ripristina</button></div>"});
-  html+="</div>";h.innerHTML=html;
+  html+="</div></details>";h.innerHTML=html;
 }
 async function ripristinaAcquisto(id){try{await api("restorePurchase",{idAcquisto:id});await caricaStato(true);await caricaPendingDispensa()}catch(e){toast(e.message||"Ripristino non riuscito.")}}
 async function terminaSpesa(){if(!confirm("Terminare la sessione di spesa attuale? I prodotti comprati resteranno nello storico."))return;try{await api("closeSession");await caricaStato(true);toast("Sessione di spesa terminata.")}catch(e){toast("Non riesco a terminare la sessione.")}}
