@@ -286,8 +286,10 @@
   .tiles{gap:12px!important}
   .tile{min-height:154px!important;padding:13px 10px!important;align-items:center!important;text-align:center!important;justify-content:center!important;gap:7px}
   .tile .emoji{font-size:2.8rem!important;line-height:1.05}
+  .tile .icon-badge{width:68px;height:68px;border-radius:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 14px rgba(0,0,0,.13);transition:background-color .18s,color .18s;flex:0 0 68px}
+  .tile .icon-badge .emoji{font-size:2.45rem!important;filter:drop-shadow(0 1px 1px rgba(0,0,0,.08))}
   .tile .name{font-size:1rem!important;margin:2px 0 0!important}
-  .tile .count{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:2px auto 0!important;font-size:1.18rem!important;color:#fff!important;background:var(--ui-accent)!important;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+  .tile .count{min-width:38px;height:30px;padding:0 10px;border-radius:999px;display:flex;align-items:center;justify-content:center;margin:2px auto 0!important;font-size:1.05rem!important;color:var(--ui-accent2)!important;background:var(--ui-bg2)!important;border:1px solid var(--ui-border);box-shadow:none}
   .tile .count::after{content:none!important}
 
   .list-screen-head{grid-template-columns:auto minmax(0,1fr)!important;grid-template-rows:auto auto;align-items:center!important;column-gap:10px!important;row-gap:2px!important;margin-bottom:7px!important}
@@ -295,6 +297,19 @@
   .list-screen-title-wrap{grid-column:2;grid-row:1;overflow:visible!important}
   .list-screen-head .list-title{font-size:1.52rem!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.08;overflow-wrap:anywhere}
   .list-screen-head .sort-select{grid-column:2;grid-row:2;justify-self:end;width:auto!important;max-width:112px!important;font-size:.72rem!important;padding:4px 7px!important;min-height:30px;margin-top:3px}
+
+  .list-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:2px 0 10px;padding:4px;background:var(--ui-bg2);border:1px solid var(--ui-border);border-radius:14px;position:sticky;top:70px;z-index:42}
+  .list-mode-switch button{min-height:39px;padding:7px 10px;border-radius:10px;border:0;background:transparent;color:var(--ui-text2);font-size:.82rem;font-weight:800;box-shadow:none}
+  .list-mode-switch button.active{background:var(--ui-card);color:var(--ui-accent2);box-shadow:0 2px 8px rgba(0,0,0,.09)}
+  .store-session-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;padding:10px 12px;border-radius:14px;background:var(--ui-card);border:1px solid var(--ui-border);box-shadow:var(--ui-shadow)}
+  .store-session-bar span{font-size:.8rem;color:var(--ui-text3);line-height:1.25}
+  .store-session-bar button{padding:8px 11px;white-space:nowrap;font-size:.78rem}
+  .store-session-bar button:disabled{opacity:.45;cursor:not-allowed}
+  #view-list.mode-prepare .store-only{display:none!important}
+  #view-list.mode-store .prepare-only{display:none!important}
+  #view-list.mode-store .sticky-add-card{display:none!important}
+  #view-list.mode-store .item{background:color-mix(in srgb,var(--ui-card) 92%,var(--ui-accent) 8%)!important}
+  #view-list.mode-prepare .sticky-add-card{top:123px}
 
   .sticky-add-card{position:sticky;top:70px;z-index:40;margin:0 0 10px!important;padding:8px!important;background:color-mix(in srgb,var(--ui-card) 94%,transparent)!important;backdrop-filter:blur(8px)}
   .sticky-add-card .add-row{gap:6px!important}
@@ -379,7 +394,7 @@
         <button class="new-list-btn" type="button" onclick="nuovaListaNonAncoraAttiva()">＋ Nuova lista</button>
       </section>
 
-      <section id="view-list" class="app-view">
+      <section id="view-list" class="app-view mode-prepare">
         <div class="list-screen-head">
           <button class="back-btn" type="button" onclick="mostraVista('home')" aria-label="Torna alle liste">‹</button>
           <div class="list-screen-title-wrap">
@@ -390,6 +405,16 @@
             <option value="categoria">Per categoria</option>
             <option value="alfabetico">Alfabetico</option>
           </select>
+        </div>
+
+        <div class="list-mode-switch" role="group" aria-label="Modalità della lista">
+          <button type="button" id="mode-prepare-btn" class="active" onclick="impostaModalitaLista('prepare')">✎ Prepara</button>
+          <button type="button" id="mode-store-btn" onclick="impostaModalitaLista('store')">🛒 In negozio</button>
+        </div>
+
+        <div class="store-session-bar store-only">
+          <span id="store-session-status">Spunta i prodotti mentre fai la spesa.</span>
+          <button type="button" id="close-session-btn" onclick="terminaSpesa()">Concludi spesa</button>
         </div>
 
         <div class="add-card sticky-add-card">
@@ -403,9 +428,9 @@
 
         <div id="items-container"></div>
 
-        <div id="bought-container"></div>
+        <div id="bought-container" class="store-only"></div>
 
-        <details class="purchases-box" id="purchases-box" ontoggle="if(this.open) caricaPendingDispensa()">
+        <details class="purchases-box store-only" id="purchases-box" ontoggle="if(this.open) caricaPendingDispensa()">
           <summary><span>🧺 Acquisti da trasferire</span><span><span id="purchases-count">0</span><span class="purchases-arrow">⌄</span></span></summary>
           <div class="purchases-body"><div class="test-transfer-note">📥 L'acquisto viene rimosso da questa coda soltanto dopo che è stato registrato in “Prodotti da sistemare” della Dispensa.</div><a href="https://mluc1966-beep.github.io/dispensa/index.html" target="_blank" rel="noopener" style="display:block;text-align:center;margin:0 0 9px;color:var(--ui-accent);font-size:.78rem;font-weight:700">Apri “Prodotti da sistemare” ↗</a><div id="purchases-body"><p class="add-hint">Nessun acquisto da trasferire.</p></div></div>
         </details>
@@ -479,7 +504,7 @@
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbwlUOrHMLFX164q7dtYaGWkC8JTjZvK_44c7M9JjGU3v_kvRwebjifqNCu6T3dzTKY3/exec";
-const APP_VERSION = "v0.5 preview estetica + Dispensa reale";
+const APP_VERSION = "v0.6 preview modalità In negozio";
 const PANTRY_QUEUE_KEY = "dispensa_ricevuti_v61";
 const PIN_STORAGE = "lista_spesa_app_pin_v1";
 const TRUST_STORAGE = "lista_spesa_device_trusted_v1";
@@ -558,6 +583,7 @@ let pin = "";
 let state = {listeAttive:[],compratiSessioneAttuale:[],prodottiAcquistatiSessioneAttuale:[],sessioneAperta:null,pendingPantryCount:0,revision:0,updatedAt:null};
 let pendingDispensa = [];
 let activeListId = "Verduriere";
+let listMode = "prepare";
 let impostazioni = {};
 let pollTimer = null;
 let busyCount = 0;
@@ -584,14 +610,14 @@ function caricaImpostazioni(){
 }
 function contrastText(hex){const h=(hex||"#4C7CA6").replace("#","");const n=parseInt(h.length===3?h.split("").map(x=>x+x).join(""):h,16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (.299*r+.587*g+.114*b)>165?"#151515":"#fff"}
 function applicaColori(){document.body.className=impostazioni.themeId||"sepia";applicaColoriTessere()}
-function applicaColoriTessere(){document.querySelectorAll(".tile").forEach(tile=>{const id=tile.dataset.entityId,c=impostazioni.liste[id]||DEFAULT_COLORS.liste[id];tile.style.setProperty("background","var(--ui-card)","important");tile.style.setProperty("color",c,"important");tile.style.setProperty("border-color",c+"55","important");const name=tile.querySelector(".name");if(name)name.style.setProperty("color",c,"important");const count=tile.querySelector(".count");if(count){count.style.setProperty("background",c,"important");count.style.setProperty("color",contrastText(c),"important")}})}
+function applicaColoriTessere(){document.querySelectorAll(".tile").forEach(tile=>{const id=tile.dataset.entityId,c=impostazioni.liste[id]||DEFAULT_COLORS.liste[id];tile.style.setProperty("background","var(--ui-card)","important");tile.style.setProperty("color","var(--ui-text)","important");tile.style.setProperty("border-color",c+"55","important");const badge=tile.querySelector(".icon-badge");if(badge){badge.style.setProperty("background",c,"important");badge.style.setProperty("color",contrastText(c),"important")}const name=tile.querySelector(".name");if(name)name.style.setProperty("color","var(--ui-text2)","important");const count=tile.querySelector(".count");if(count){count.style.setProperty("background","var(--ui-bg2)","important");count.style.setProperty("color","var(--ui-accent2)","important")}})}
 function salvaImpostazioni(){const cb=document.getElementById("chiedi-pin-sempre");if(cb)impostazioni.chiediPinSempre=cb.checked;localStorage.setItem(SETTINGS_STORAGE,JSON.stringify(impostazioni));applicaColori()}
 function renderTemi(){const h=document.getElementById("theme-grid");h.innerHTML="";TEMI.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="theme-opt"+(impostazioni.themeId===t.id?" on":"");b.onclick=()=>{impostazioni.themeId=t.id;salvaImpostazioni();renderTemi()};b.innerHTML="<strong>"+esc(t.nome)+"</strong><div class='theme-dots'>"+t.c.map(x=>"<span class='theme-dot' style='background:"+x+"'></span>").join("")+"</div>";h.appendChild(b)})}
 function renderColoriListe(){const h=document.getElementById("color-liste-container");h.innerHTML="";LISTE.forEach(l=>{const c=impostazioni.liste[l.id];const row=document.createElement("div");row.className="list-color-row";const head=document.createElement("div");head.className="list-color-head";head.innerHTML="<div class='current-color' style='background:"+c+"'></div><div class='list-color-label'>"+l.emoji+" "+l.nome+"</div>";const pal=document.createElement("div");pal.className="windows-palette";WINDOWS_LIST_COLORS.forEach(x=>{const b=document.createElement("button");b.type="button";b.className="color-swatch"+(x.toLowerCase()===c.toLowerCase()?" selected":"");b.style.background=x;b.onclick=()=>{impostazioni.liste[l.id]=x;salvaImpostazioni();renderColoriListe();disegnaTessere()};pal.appendChild(b)});row.appendChild(head);row.appendChild(pal);h.appendChild(row)})}
 function ripristinaColoriListe(){LISTE.forEach(l=>impostazioni.liste[l.id]=DEFAULT_COLORS.liste[l.id]);salvaImpostazioni();renderColoriListe();disegnaTessere()}
 
 function vistaAttiva(){const e=document.querySelector(".app-view.active");return e?e.id.replace("view-",""):"home"}
-function mostraVista(which){if(which==="settings")vistaPrimaImpostazioni=vistaAttiva()==="settings"?"home":vistaAttiva();document.querySelectorAll(".app-view").forEach(v=>v.classList.remove("active"));document.getElementById("view-"+which)?.classList.add("active");if(which==="home")disegnaTessere();if(which==="list"){const box=document.getElementById("purchases-box");if(box)box.open=false;ridisegna()}if(which==="settings"){document.getElementById("chiedi-pin-sempre").checked=!!impostazioni.chiediPinSempre;renderTemi();renderColoriListe();document.getElementById("settings-version").textContent=APP_VERSION;aggiornaMetaUI()}}
+function mostraVista(which){if(which==="settings")vistaPrimaImpostazioni=vistaAttiva()==="settings"?"home":vistaAttiva();document.querySelectorAll(".app-view").forEach(v=>v.classList.remove("active"));document.getElementById("view-"+which)?.classList.add("active");if(which==="home")disegnaTessere();if(which==="list"){const box=document.getElementById("purchases-box");if(box)box.open=false;impostaModalitaLista(listMode,false)}if(which==="settings"){document.getElementById("chiedi-pin-sempre").checked=!!impostazioni.chiediPinSempre;renderTemi();renderColoriListe();document.getElementById("settings-version").textContent=APP_VERSION;aggiornaMetaUI()}}
 function tornaDaImpostazioni(){mostraVista(vistaPrimaImpostazioni==="settings"?"home":vistaPrimaImpostazioni)}
 function nuovaListaNonAncoraAttiva(){alert("La creazione di nuove liste non è ancora attiva. Le quattro liste attuali restano quelle collegate ad Alexa.")}
 
@@ -647,11 +673,20 @@ function dimenticaAccesso(){localStorage.removeItem(PIN_STORAGE);localStorage.re
 
 function disegnaTessere(){
   const h=document.getElementById("tiles-container");if(!h)return;h.innerHTML="";
-  LISTE.forEach(l=>{const count=(state.listeAttive||[]).filter(x=>x.lista===l.id).length;const b=document.createElement("button");b.type="button";b.className="tile";b.dataset.entityId=l.id;b.onclick=()=>{activeListId=l.id;mostraVista("list")};b.innerHTML="<span class='emoji'>"+l.emoji+"</span><span class='name'>"+l.nome+"</span><span class='count'>"+count+"</span>";h.appendChild(b)});
+  LISTE.forEach(l=>{const count=(state.listeAttive||[]).filter(x=>x.lista===l.id).length;const b=document.createElement("button");b.type="button";b.className="tile";b.dataset.entityId=l.id;b.onclick=()=>{activeListId=l.id;listMode="prepare";mostraVista("list")};b.innerHTML="<span class='icon-badge'><span class='emoji'>"+l.emoji+"</span></span><span class='name'>"+l.nome+"</span><span class='count'>"+count+"</span>";h.appendChild(b)});
   applicaColoriTessere();
 }
 function itemsLista(){return (state.listeAttive||[]).filter(x=>x.lista===activeListId)}
 function compratiLista(){return (state.compratiSessioneAttuale||[]).filter(x=>x.lista===activeListId)}
+function impostaModalitaLista(mode,redraw=true){
+  listMode=mode==="store"?"store":"prepare";
+  const view=document.getElementById("view-list");
+  if(view){view.classList.toggle("mode-prepare",listMode==="prepare");view.classList.toggle("mode-store",listMode==="store")}
+  document.getElementById("mode-prepare-btn")?.classList.toggle("active",listMode==="prepare");
+  document.getElementById("mode-store-btn")?.classList.toggle("active",listMode==="store");
+  if(listMode==="store")caricaPendingDispensa();
+  ridisegna();
+}
 function ridisegna(){
   const l=LISTE.find(x=>x.id===activeListId);document.getElementById("active-list-title").textContent=(l?.emoji||"")+" "+(l?.nome||activeListId);
   const host=document.getElementById("items-container");host.innerHTML="";
@@ -665,14 +700,15 @@ function ridisegna(){
   }else items.forEach(x=>host.appendChild(creaRigaItem(x)));
   renderComprati();
   renderAcquisti();
+  aggiornaBarraNegozio();
 }
 function creaRigaItem(item){
   const row=document.createElement("div");row.className="item";
-  const cb=document.createElement("input");cb.type="checkbox";cb.onchange=()=>acquistaConAnimazione(item,row,cb);row.appendChild(cb);
+  if(listMode==="store"){const cb=document.createElement("input");cb.type="checkbox";cb.className="store-check";cb.setAttribute("aria-label","Segna "+item.nome+" come comprato");cb.onchange=()=>acquistaConAnimazione(item,row,cb);row.appendChild(cb)}
   const name=document.createElement("div");name.className="name";name.textContent=item.nome;name.title=item.nome;row.appendChild(name);
   const cat=document.createElement("select");cat.className="cat-select";cat.title="Categoria";CATEGORIE.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.emoji+" "+c.nome;o.selected=(c.id===item.categoria)||(c.id==="Altro"&&!CATEGORIE.some(z=>z.id===item.categoria));cat.appendChild(o)});cat.onchange=()=>aggiornaItem(item,{categoria:cat.value},true);row.appendChild(cat);
   const q=document.createElement("div");q.className="qty-compact";const inp=document.createElement("input");inp.type="number";inp.min="0.01";inp.step="0.1";inp.value=item.quantita||1;inp.onchange=()=>aggiornaItem(item,{quantita:Number(inp.value)||1});const un=document.createElement("select");UNITA.forEach(u=>{const o=document.createElement("option");o.value=u;o.textContent=u;o.selected=u===item.unita;un.appendChild(o)});un.onchange=()=>aggiornaItem(item,{unita:un.value});q.appendChild(inp);q.appendChild(un);row.appendChild(q);
-  const scan=document.createElement("button");scan.type="button";scan.className="barcode-btn";scan.title="Scansiona barcode";scan.setAttribute("aria-label","Scansiona barcode");scan.innerHTML='<svg viewBox="0 0 28 24" aria-hidden="true"><rect x="1" y="2" width="2" height="20"/><rect x="5" y="2" width="1" height="20"/><rect x="8" y="2" width="3" height="20"/><rect x="13" y="2" width="1" height="20"/><rect x="16" y="2" width="2" height="20"/><rect x="20" y="2" width="1" height="20"/><rect x="23" y="2" width="4" height="20"/></svg>';scan.onclick=()=>apriScanner(item);row.appendChild(scan);
+  if(listMode==="store"){const scan=document.createElement("button");scan.type="button";scan.className="barcode-btn";scan.title="Scansiona barcode";scan.setAttribute("aria-label","Scansiona barcode");scan.innerHTML='<svg viewBox="0 0 28 24" aria-hidden="true"><rect x="1" y="2" width="2" height="20"/><rect x="5" y="2" width="1" height="20"/><rect x="8" y="2" width="3" height="20"/><rect x="13" y="2" width="1" height="20"/><rect x="16" y="2" width="2" height="20"/><rect x="20" y="2" width="1" height="20"/><rect x="23" y="2" width="4" height="20"/></svg>';scan.onclick=()=>apriScanner(item);row.appendChild(scan)}
   const del=document.createElement("button");del.type="button";del.className="danger-mini";del.title="Elimina";del.textContent="×";del.onclick=()=>eliminaItem(item);row.appendChild(del);
   return row;
 }
@@ -683,6 +719,17 @@ async function acquistaManuale(item){try{await api("purchaseItem",{idVoce:item.i
 async function acquistaConAnimazione(item,row,cb){cb.disabled=true;row.classList.add("buying");await new Promise(r=>setTimeout(r,240));try{await acquistaManuale(item)}finally{if(document.body.contains(row)){row.classList.remove("buying");cb.checked=false;cb.disabled=false}}}
 
 let voiceRecognition=null;
+function separaProdottiDettati(text){return String(text||"").split(/\s+(?:più|piu|\+)(?:[\s,;]+|$)/i).map(x=>x.replace(/^[,;.\s]+|[,;.\s]+$/g,"").trim()).filter(Boolean)}
+async function aggiungiProdottiDettati(text){
+  const input=document.getElementById("new-item-input"),prodotti=separaProdottiDettati(text);
+  if(!prodotti.length)return;
+  input.disabled=true;
+  try{
+    for(const raw of prodotti){const nome=raw.charAt(0).toUpperCase()+raw.slice(1);await api("addItem",{lista:activeListId,nome,quantita:1,unita:"pz",categoria:categoriaAutomatica(nome),origine:"manuale"})}
+    input.value="";await caricaStato(true);toast(prodotti.length===1?"Prodotto aggiunto.":prodotti.length+" prodotti aggiunti.")
+  }catch(e){await caricaStato(true);toast("Alcuni prodotti potrebbero non essere stati aggiunti.")}
+  finally{input.disabled=false;input.focus()}
+}
 function dettaProdotto(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){toast("La dettatura vocale non è supportata da questo browser.");return;}
@@ -690,7 +737,7 @@ function dettaProdotto(){
   const btn=document.querySelector(".voice-add-btn"),input=document.getElementById("new-item-input");
   const rec=new SR();voiceRecognition=rec;rec.lang="it-IT";rec.interimResults=false;rec.maxAlternatives=1;
   rec.onstart=()=>{btn?.classList.add("listening");toast("Parla ora…")};
-  rec.onresult=e=>{const text=String(e.results?.[0]?.[0]?.transcript||"").trim();if(text){input.value=text.charAt(0).toUpperCase()+text.slice(1);input.focus()}};
+  rec.onresult=e=>{const text=String(e.results?.[0]?.[0]?.transcript||"").trim();if(text){input.value=text;aggiungiProdottiDettati(text)}};
   rec.onerror=e=>{if(e.error!=="aborted")toast("Non ho capito. Riprova.")};
   rec.onend=()=>{voiceRecognition=null;btn?.classList.remove("listening")};
   try{rec.start()}catch(e){voiceRecognition=null;btn?.classList.remove("listening");toast("Microfono non disponibile.")}
@@ -700,11 +747,11 @@ function renderComprati(){
   const h=document.getElementById("bought-container");const rows=compratiLista();
   if(!state.sessioneAperta&&!rows.length){h.innerHTML="";return}
   let html="<details class='bought-box'><summary><span>✓ Comprati</span><span class='bought-summary-meta'><span class='section-count'>"+rows.length+"</span><span class='purchases-arrow'>⌄</span></span></summary><div class='bought-body'>";
-  if(state.sessioneAperta)html+="<div class='bought-actions'><button type='button' onclick='terminaSpesa()'>Termina la spesa attuale</button></div>";
   if(!rows.length)html+="<div class='empty-note'>Nessun prodotto comprato in questa lista durante la sessione attuale.</div>";
   else rows.slice().sort((a,b)=>String(b.dataAcquisto).localeCompare(String(a.dataAcquisto))).forEach(x=>{html+="<div class='bought-row'><div class='bought-name'>"+esc(x.voceListaOriginale)+"</div><button class='restore-btn' onclick='ripristinaAcquisto("+JSON.stringify(x.idAcquisto)+")'>Ripristina</button></div>"});
   html+="</div></details>";h.innerHTML=html;
 }
+function aggiornaBarraNegozio(){const status=document.getElementById("store-session-status"),btn=document.getElementById("close-session-btn"),n=compratiLista().length;if(status)status.textContent=state.sessioneAperta?(n+" "+(n===1?"prodotto comprato":"prodotti comprati")+" in questa lista."):"La sessione inizierà al primo prodotto comprato.";if(btn)btn.disabled=!state.sessioneAperta}
 async function ripristinaAcquisto(id){try{await api("restorePurchase",{idAcquisto:id});await caricaStato(true);await caricaPendingDispensa()}catch(e){toast(e.message||"Ripristino non riuscito.")}}
 async function terminaSpesa(){if(!confirm("Terminare la sessione di spesa attuale? I prodotti comprati resteranno nello storico."))return;try{await api("closeSession");await caricaStato(true);toast("Sessione di spesa terminata.")}catch(e){toast("Non riesco a terminare la sessione.")}}
 
