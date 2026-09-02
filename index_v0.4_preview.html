@@ -714,30 +714,71 @@ function creaRigaItem(item){
 }
 async function aggiornaItem(item,patch,learn=false){try{await api("updateItem",{idVoce:item.idVoce,...patch});if(learn&&patch.categoria)imparaCategoria(item.nome,patch.categoria);await caricaStato(true)}catch(e){toast("Modifica non salvata.")}}
 async function eliminaItem(item){if(!confirm("Eliminare “"+item.nome+"” dalla lista?"))return;try{await api("deleteItem",{idVoce:item.idVoce});await caricaStato(true)}catch(e){toast("Non riesco a eliminare il prodotto.")}}
-async function aggiungiArticolo(){const input=document.getElementById("new-item-input"),nome=input.value.trim();if(!nome)return;input.disabled=true;try{await api("addItem",{lista:activeListId,nome,quantita:1,unita:"pz",categoria:categoriaAutomatica(nome),origine:"manuale"});input.value="";await caricaStato(true)}catch(e){toast("Non riesco ad aggiungere il prodotto.")}finally{input.disabled=false;input.focus()}}
+let inserimentoMultiploInCorso=false;
+function separaProdottiDigitati(text){return String(text||"").split(/[,.]+/).map(x=>x.trim()).filter(Boolean)}
+async function aggiungiArticolo(){
+  if(inserimentoMultiploInCorso)return;
+  const input=document.getElementById("new-item-input"),prodotti=separaProdottiDigitati(input.value);
+  if(!prodotti.length)return;
+  inserimentoMultiploInCorso=true;input.disabled=true;input.value="";
+  try{
+    for(const raw of prodotti){
+      const nome=raw.charAt(0).toUpperCase()+raw.slice(1);
+      await api("addItem",{lista:activeListId,nome,quantita:1,unita:"pz",categoria:categoriaAutomatica(nome),origine:"manuale"});
+    }
+    await caricaStato(true);
+    if(prodotti.length>1)toast(prodotti.length+" prodotti aggiunti.");
+  }catch(e){
+    await caricaStato(true);
+    toast("Alcuni prodotti potrebbero non essere stati aggiunti.");
+  }finally{
+    inserimentoMultiploInCorso=false;input.disabled=false;input.focus();
+  }
+}
 async function acquistaManuale(item){try{await api("purchaseItem",{idVoce:item.idVoce});await caricaStato(true);await caricaPendingDispensa()}catch(e){toast("Non riesco a segnare il prodotto come comprato.")}}
 async function acquistaConAnimazione(item,row,cb){cb.disabled=true;row.classList.add("buying");await new Promise(r=>setTimeout(r,240));try{await acquistaManuale(item)}finally{if(document.body.contains(row)){row.classList.remove("buying");cb.checked=false;cb.disabled=false}}}
 
 let voiceRecognition=null;
-function separaProdottiDettati(text){return String(text||"").split(/\s+(?:più|piu|\+)(?:[\s,;]+|$)/i).map(x=>x.replace(/^[,;.\s]+|[,;.\s]+$/g,"").trim()).filter(Boolean)}
+function separaProdottiDettati(text){
+  return String(text||"")
+    .split(/\s+(?:più|piu|\+)(?:\s+|$)/i)
+    .map(x=>x.replace(/^[,;.\s]+|[,;.\s]+$/g,"").trim())
+    .filter(Boolean);
+}
 async function aggiungiProdottiDettati(text){
+  if(inserimentoMultiploInCorso)return;
   const input=document.getElementById("new-item-input"),prodotti=separaProdottiDettati(text);
   if(!prodotti.length)return;
-  input.disabled=true;
+  inserimentoMultiploInCorso=true;input.disabled=true;input.value="";
   try{
-    for(const raw of prodotti){const nome=raw.charAt(0).toUpperCase()+raw.slice(1);await api("addItem",{lista:activeListId,nome,quantita:1,unita:"pz",categoria:categoriaAutomatica(nome),origine:"manuale"})}
-    input.value="";await caricaStato(true);toast(prodotti.length===1?"Prodotto aggiunto.":prodotti.length+" prodotti aggiunti.")
-  }catch(e){await caricaStato(true);toast("Alcuni prodotti potrebbero non essere stati aggiunti.")}
-  finally{input.disabled=false;input.focus()}
+    for(const raw of prodotti){
+      const nome=raw.charAt(0).toUpperCase()+raw.slice(1);
+      await api("addItem",{lista:activeListId,nome,quantita:1,unita:"pz",categoria:categoriaAutomatica(nome),origine:"manuale"});
+    }
+    await caricaStato(true);
+    toast(prodotti.length===1?"Prodotto aggiunto.":prodotti.length+" prodotti aggiunti.");
+  }catch(e){
+    await caricaStato(true);
+    toast("Alcuni prodotti potrebbero non essere stati aggiunti.");
+  }finally{
+    inserimentoMultiploInCorso=false;input.disabled=false;input.focus();
+  }
 }
 function dettaProdotto(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){toast("La dettatura vocale non è supportata da questo browser.");return;}
   if(voiceRecognition){try{voiceRecognition.stop()}catch(e){}voiceRecognition=null;return;}
+  if(inserimentoMultiploInCorso)return;
   const btn=document.querySelector(".voice-add-btn"),input=document.getElementById("new-item-input");
   const rec=new SR();voiceRecognition=rec;rec.lang="it-IT";rec.interimResults=false;rec.maxAlternatives=1;
   rec.onstart=()=>{btn?.classList.add("listening");toast("Parla ora…")};
-  rec.onresult=e=>{const text=String(e.results?.[0]?.[0]?.transcript||"").trim();if(text){input.value=text;aggiungiProdottiDettati(text)}};
+  rec.onresult=e=>{
+    const text=String(e.results?.[0]?.[0]?.transcript||"").trim();
+    if(text){
+      input.value="";
+      void aggiungiProdottiDettati(text);
+    }
+  };
   rec.onerror=e=>{if(e.error!=="aborted")toast("Non ho capito. Riprova.")};
   rec.onend=()=>{voiceRecognition=null;btn?.classList.remove("listening")};
   try{rec.start()}catch(e){voiceRecognition=null;btn?.classList.remove("listening");toast("Microfono non disponibile.")}
