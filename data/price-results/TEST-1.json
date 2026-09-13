@@ -1,7 +1,7 @@
 {
   "requestId": "TEST-1",
-  "generatedAt": "2026-09-13T22:29:36.931Z",
-  "engine": "playwright-browser-v2",
+  "generatedAt": "2026-09-13T22:57:59.351Z",
+  "engine": "playwright-browser-v4",
   "items": [
     {
       "nome": "Latte",
@@ -14,12 +14,80 @@
       "unita": "pz"
     }
   ],
-  "prices": [],
+  "prices": [
+    {
+      "nomeLista": "Latte",
+      "prodotto": "latte uht",
+      "storeId": "ipercoop_collegno",
+      "storeName": "Ipercoop Collegno · Piazza Bruno Trentin 1",
+      "prezzo": 58.33,
+      "valuta": "EUR",
+      "offerta": false,
+      "scontoPercentuale": null,
+      "tipoFonte": "browser",
+      "fonte": "Sito ufficiale",
+      "sourceUrl": "https://www.novacoop.it/",
+      "confidence": "medium",
+      "checkedAt": "2026-09-13T22:56:07.062Z"
+    },
+    {
+      "nomeLista": "Spaghetti",
+      "prodotto": "pasta di semola",
+      "storeId": "ipercoop_collegno",
+      "storeName": "Ipercoop Collegno · Piazza Bruno Trentin 1",
+      "prezzo": 5.2,
+      "valuta": "EUR",
+      "offerta": false,
+      "scontoPercentuale": null,
+      "tipoFonte": "browser",
+      "fonte": "Sito ufficiale",
+      "sourceUrl": "https://www.novacoop.it/",
+      "confidence": "medium",
+      "checkedAt": "2026-09-13T22:56:14.254Z"
+    },
+    {
+      "nomeLista": "Latte",
+      "prodotto": "latte uht",
+      "storeId": "ipercoop_beinasco",
+      "storeName": "Ipercoop Beinasco · Le Fornaci",
+      "prezzo": 58.33,
+      "valuta": "EUR",
+      "offerta": false,
+      "scontoPercentuale": null,
+      "tipoFonte": "browser",
+      "fonte": "Sito ufficiale",
+      "sourceUrl": "https://www.novacoop.it/",
+      "confidence": "medium",
+      "checkedAt": "2026-09-13T22:56:46.893Z"
+    },
+    {
+      "nomeLista": "Spaghetti",
+      "prodotto": "pasta di semola",
+      "storeId": "ipercoop_beinasco",
+      "storeName": "Ipercoop Beinasco · Le Fornaci",
+      "prezzo": 5.2,
+      "valuta": "EUR",
+      "offerta": false,
+      "scontoPercentuale": null,
+      "tipoFonte": "browser",
+      "fonte": "Sito ufficiale",
+      "sourceUrl": "https://www.novacoop.it/",
+      "confidence": "medium",
+      "checkedAt": "2026-09-13T22:56:54.083Z"
+    }
+  ],
   "diagnostics": [
     {
       "storeId": "gigante_rivalta",
       "storeName": "Il Gigante Rivalta",
       "promoPage": "https://www.promoqui.it/rivalta-di-torino/il-gigante",
+      "page": {
+        "title": "ERROR: The request could not be satisfied",
+        "status": 403,
+        "finalUrl": "https://www.promoqui.it/rivalta-di-torino/il-gigante",
+        "visibleLength": 513,
+        "initialHtmlLength": 919
+      },
       "items": [
         {
           "item": "Latte",
@@ -35,14 +103,27 @@
       "storeId": "ipercoop_collegno",
       "storeName": "Ipercoop Collegno · Piazza Bruno Trentin 1",
       "promoPage": "https://www.promoqui.it/collegno/ipercoop",
+      "page": {
+        "title": "ERROR: The request could not be satisfied",
+        "status": 403,
+        "finalUrl": "https://www.promoqui.it/collegno/ipercoop",
+        "visibleLength": 513,
+        "initialHtmlLength": 919
+      },
       "items": [
         {
           "item": "Latte",
-          "found": false
+          "found": true,
+          "price": 58.33,
+          "product": "latte uht",
+          "source": "Sito ufficiale"
         },
         {
           "item": "Spaghetti",
-          "found": false
+          "found": true,
+          "price": 5.2,
+          "product": "pasta di semola",
+          "source": "Sito ufficiale"
         }
       ]
     },
@@ -50,14 +131,27 @@
       "storeId": "ipercoop_beinasco",
       "storeName": "Ipercoop Beinasco · Le Fornaci",
       "promoPage": "https://www.promoqui.it/beinasco/ipercoop",
+      "page": {
+        "title": "ERROR: The request could not be satisfied",
+        "status": 403,
+        "finalUrl": "https://www.promoqui.it/beinasco/ipercoop",
+        "visibleLength": 513,
+        "initialHtmlLength": 919
+      },
       "items": [
         {
           "item": "Latte",
-          "found": false
+          "found": true,
+          "price": 58.33,
+          "product": "latte uht",
+          "source": "Sito ufficiale"
         },
         {
           "item": "Spaghetti",
-          "found": false
+          "found": true,
+          "price": 5.2,
+          "product": "pasta di semola",
+          "source": "Sito ufficiale"
         }
       ]
     },
@@ -65,6 +159,13 @@
       "storeId": "lidl_beinasco",
       "storeName": "Lidl Beinasco",
       "promoPage": "https://www.promoqui.it/beinasco/lidl",
+      "page": {
+        "title": "ERROR: The request could not be satisfied",
+        "status": 403,
+        "finalUrl": "https://www.promoqui.it/beinasco/lidl",
+        "visibleLength": 513,
+        "initialHtmlLength": 919
+      },
       "items": [
         {
           "item": "Latte",
@@ -80,6 +181,13 @@
       "storeId": "lidl_rivoli",
       "storeName": "Lidl Rivoli · Corso Susa 260/A",
       "promoPage": "https://www.promoqui.it/rivoli/lidl",
+      "page": {
+        "title": "ERROR: The request could not be satisfied",
+        "status": 403,
+        "finalUrl": "https://www.promoqui.it/rivoli/lidl",
+        "visibleLength": 513,
+        "initialHtmlLength": 919
+      },
       "items": [
         {
           "item": "Latte",
@@ -95,6 +203,13 @@
       "storeId": "ekom_bruino",
       "storeName": "Ekom Bruino",
       "promoPage": "https://www.promoqui.it/bruino/ekom",
+      "page": {
+        "title": "ERROR: The request could not be satisfied",
+        "status": 403,
+        "finalUrl": "https://www.promoqui.it/bruino/ekom",
+        "visibleLength": 513,
+        "initialHtmlLength": 919
+      },
       "items": [
         {
           "item": "Latte",
