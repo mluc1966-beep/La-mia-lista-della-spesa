@@ -82,10 +82,20 @@ const norm = s => String(s||"").toLowerCase().normalize("NFD")
   .replace(/\s+/g," ")
   .trim();
 
+const MAX_HTML = 2_500_000;
+const MAX_VISIBLE = 500_000;
+
+function clipText(s, limit){
+  s=String(s||"");
+  if(s.length<=limit) return s;
+  const half=Math.floor(limit/2);
+  return s.slice(0,half)+"\n...\n"+s.slice(-half);
+}
+
 function htmlToText(html){
   return String(html||"")
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi," ")
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi," ")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi," ")
     .replace(/<[^>]+>/g,"\n")
     .replace(/&nbsp;/gi," ")
     .replace(/&euro;|&#8364;/gi,"€")
@@ -94,6 +104,25 @@ function htmlToText(html){
     .replace(/&#39;|&apos;/gi,"'")
     .replace(/\r/g,"")
     .replace(/\n{2,}/g,"\n");
+}
+
+function rawSnippetsForItem(raw,item){
+  raw=String(raw||"");
+  const out=[];
+  const low=raw.toLowerCase();
+  for(const q of queriesFor(item)){
+    for(const term of norm(q).split(" ").filter(x=>x.length>2)){
+      let from=0, hits=0;
+      while(hits<8){
+        const i=low.indexOf(term,from);
+        if(i<0) break;
+        out.push(raw.slice(Math.max(0,i-1200),Math.min(raw.length,i+1800)));
+        from=i+term.length;
+        hits++;
+      }
+    }
+  }
+  return out.join("\n");
 }
 
 function prefFor(name){
@@ -184,43 +213,43 @@ async function dismissCookies(page){
 }
 
 async function loadAllRepresentations(page,url){
-  const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:35000});
+  const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
   let initialHtml="";
-  try{ initialHtml = response ? await response.text() : ""; }catch(e){}
-  await dismissCookies(page);
-  await page.waitForTimeout(1800);
+  try{
+    initialHtml=response ? await response.text() : "";
+  }catch(e){}
+  initialHtml=clipText(initialHtml,MAX_HTML);
 
-  const visible=await page.locator("body").innerText({timeout:15000}).catch(()=> "");
-  const domHtml=await page.content().catch(()=> "");
+  await dismissCookies(page);
+  await page.waitForTimeout(1200);
+
+  const visible=clipText(
+    await page.locator("body").innerText({timeout:12000}).catch(()=> ""),
+    MAX_VISIBLE
+  );
   const title=await page.title().catch(()=> "");
 
-  // IMPORTANTISSIMO: PromoQui ha testo SEO nel documento iniziale che può non
-  // rimanere identico nel DOM dopo l'idratazione JS. Uniamo quindi:
-  // 1) testo visibile
-  // 2) HTML iniziale restituito dal server
-  // 3) DOM finale
-  const combined=[
-    visible,
-    htmlToText(initialHtml),
-    htmlToText(domHtml),
-    initialHtml,
-    domHtml
-  ].join("\n");
-
+  // Niente page.content() e niente HTML grezzo completo:
+  // erano la causa dell'esaurimento dei 4 GB di heap nel run #5.
   return {
     title,
     status:response?.status?.()||null,
     finalUrl:page.url(),
     visibleLength:visible.length,
     initialHtmlLength:initialHtml.length,
-    domHtmlLength:domHtml.length,
-    combined
+    visible,
+    initialHtml
   };
 }
 
 async function findOnPage(page,url,item){
   const loaded=await loadAllRepresentations(page,url);
-  const candidates=extractPriceCandidates(loaded.combined,item);
+  const searchable=[
+    loaded.visible,
+    htmlToText(loaded.initialHtml),
+    rawSnippetsForItem(loaded.initialHtml,item)
+  ].join("\n");
+  const candidates=extractPriceCandidates(searchable,item);
   return {loaded,candidates};
 }
 
@@ -231,6 +260,7 @@ const context=await browser.newContext({
   userAgent:"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
 });
 const page=await context.newPage();
+page.setDefaultTimeout(12000);
 
 const results=[];
 const diagnostics=[];
@@ -252,8 +282,7 @@ for(const store of stores){
       status:storePage.status,
       finalUrl:storePage.finalUrl,
       visibleLength:storePage.visibleLength,
-      initialHtmlLength:storePage.initialHtmlLength,
-      domHtmlLength:storePage.domHtmlLength
+      initialHtmlLength:storePage.initialHtmlLength
     };
   }catch(e){
     storeDiag.page={error:String(e.message||e)};
@@ -263,7 +292,12 @@ for(const store of stores){
     let best=null, source="", sourceUrl="";
 
     if(storePage){
-      const hits=extractPriceCandidates(storePage.combined,item);
+      const searchable=[
+        storePage.visible,
+        htmlToText(storePage.initialHtml),
+        rawSnippetsForItem(storePage.initialHtml,item)
+      ].join("\n");
+      const hits=extractPriceCandidates(searchable,item);
       if(hits[0]){
         best=hits[0];
         source="PromoQui pagina negozio";
@@ -338,7 +372,7 @@ await browser.close();
 const payload={
   requestId,
   generatedAt:new Date().toISOString(),
-  engine:"playwright-browser-v3",
+  engine:"playwright-browser-v4",
   items,
   prices:results,
   diagnostics
