@@ -510,9 +510,8 @@
         </div>
 
         <div class="best-result-note">
-          Il confronto interroga in un'unica richiesta <b>Open Prices, CosìComodo/Il Gigante, CoopShop, Lidl ed Ekom</b>.
-          Ogni risultato conserva fonte, data e livello di affidabilità. I prezzi non verificabili sul singolo punto vendita
-          vengono mostrati come indicativi e non spacciati per certi.
+          Il confronto cerca prima le <b>offerte correnti dei sei punti vendita</b> (PromoQui), poi integra Open Prices
+          e l'eventuale catalogo online CosìComodo realmente attribuibile a Rivalta. Ogni prezzo conserva fonte e affidabilità.
         </div>
         <div id="best-source-status" class="best-source-status"></div>
         <button type="button" class="secondary best-refresh" onclick="aggiornaPrezziLive(true)">↻ Aggiorna prezzi adesso</button>
@@ -521,8 +520,8 @@
         <div id="best-products"></div>
 
         <p class="best-legend">
-          Fonti attive nel motore: Open Prices/Open Food Facts, CosìComodo/Il Gigante, CoopShop, Lidl ed Ekom.
-          Le preferenze di acquisto vengono applicate prima del confronto; le fonti parziali sono sempre segnalate.
+          Fonti attive: offerte locali PromoQui dei sei negozi, Open Prices/Open Food Facts e CosìComodo quando il punto vendita
+          è realmente identificabile. Le preferenze di acquisto vengono applicate prima del confronto.
         </p>
       </section>
 
@@ -608,7 +607,7 @@
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbwlUOrHMLFX164q7dtYaGWkC8JTjZvK_44c7M9JjGU3v_kvRwebjifqNCu6T3dzTKY3/exec";
-const APP_VERSION = "v1.5";
+const APP_VERSION = "v1.6";
 const PANTRY_QUEUE_KEY = "dispensa_ricevuti_v61";
 const PIN_STORAGE = "lista_spesa_app_pin_v1";
 const TRUST_STORAGE = "lista_spesa_device_trusted_v1";
@@ -697,7 +696,7 @@ const PRICE_STORES = [
   {id:"gigante_rivalta",nome:"Il Gigante Rivalta",fonte:"CosìComodo / offerte"},
   {id:"lidl_beinasco",nome:"Lidl Beinasco",fonte:"Offerte Lidl"},
   {id:"lidl_rivoli",nome:"Lidl Rivoli · Corso Susa 260",fonte:"Offerte Lidl"},
-  {id:"ipercoop_collegno",nome:"Ipercoop Collegno · Via Enrico Fermi",fonte:"CoopShop / offerte"},
+  {id:"ipercoop_collegno",nome:"Ipercoop Collegno · Piazza Bruno Trentin 1",fonte:"Offerte locali"},
   {id:"ipercoop_beinasco",nome:"Ipercoop Beinasco · Le Fornaci",fonte:"CoopShop / offerte"}
 ];
 
@@ -818,7 +817,7 @@ function renderSpesaMigliore(){
   const nonConfrontabili=dettagli.length-confrontabili.length;
 
   if(!confrontabili.length){
-    summary.innerHTML="<div class='best-empty'><b>Nessun prezzo corrente disponibile per i prodotti di questa lista.</b><br><br>La funzione è attiva, ma il database prezzi non contiene ancora dati correnti per questa spesa.</div>";
+    summary.innerHTML="<div class='best-empty'><b>Nessun prezzo corrente disponibile per i prodotti di questa lista.</b><br><br>Nessuna delle fonti ha trovato un prezzo/offerta corrente per questi prodotti nei sei punti vendita.</div>";
   }else{
     const perStore={};
     dettagli.forEach(x=>{
@@ -837,15 +836,29 @@ function renderSpesaMigliore(){
       const validi=cards.filter(x=>x.d.n===items.length);
       if(validi.length){
         const win=validi[0];
-        summary.innerHTML="<div class='best-store'><div class='best-store-top'><div class='best-store-name'>🏆 "+esc(win.s.nome)+"</div><div class='best-store-price'>"+fmtEuro(win.d.tot)+"</div></div><div class='best-store-meta'>Tutti i "+items.length+" prodotti hanno un prezzo corrente disponibile in questo negozio.</div></div>";
-      }else{
-        summary.innerHTML="<div class='best-result-note'><b>Nessun singolo negozio è confrontabile sull'intera lista.</b><br>Ci sono "+nonConfrontabili+" prodotti senza prezzo corrente sufficiente oppure negozi con copertura parziale.</div>";
+        summary.innerHTML="<div class='best-store'><div class='best-store-top'><div class='best-store-name'>🏆 "+esc(win.s.nome)+"</div><div class='best-store-price'>"+fmtEuro(win.d.tot)+"</div></div><div class='best-store-meta'>Tutti i "+items.length+" prodotti sono confrontabili in questo negozio.</div></div>";
+      }else if(cards.length){
+        const win=cards.slice().sort((a,b)=>(b.d.n-a.d.n)||(a.d.tot-b.d.tot))[0];
+        summary.innerHTML="<div class='best-store'><div class='best-store-top'><div class='best-store-name'>🛒 "+esc(win.s.nome)+"</div><div class='best-store-price'>"+fmtEuro(win.d.tot)+"*</div></div><div class='best-store-meta'>Confronto parziale: "+win.d.n+" di "+items.length+" prodotti hanno un prezzo disponibile. *Totale dei soli prodotti confrontabili.</div></div>";
+      }
+    }else if(bestMode==="two"){
+      let bestPair=null;
+      for(let i=0;i<PRICE_STORES.length;i++)for(let j=i+1;j<PRICE_STORES.length;j++){
+        const a=PRICE_STORES[i],b=PRICE_STORES[j];
+        let total=0,coverage=0;
+        dettagli.forEach(x=>{
+          const pa=x.prezzi.filter(p=>p.storeId===a.id||p.storeId===b.id).sort((u,v)=>Number(u.prezzo)-Number(v.prezzo))[0];
+          if(pa){coverage++;total+=Number(pa.prezzo)*(Number(x.item.quantita)||1)}
+        });
+        const cand={a,b,total,coverage};
+        if(!bestPair||coverage>bestPair.coverage||(coverage===bestPair.coverage&&total<bestPair.total))bestPair=cand;
+      }
+      if(bestPair){
+        summary.innerHTML="<div class='best-store'><div class='best-store-top'><div class='best-store-name'>🛒🛒 "+esc(bestPair.a.nome)+" + "+esc(bestPair.b.nome)+"</div><div class='best-store-price'>"+fmtEuro(bestPair.total)+(bestPair.coverage<items.length?"*":"")+"</div></div><div class='best-store-meta'>"+bestPair.coverage+" di "+items.length+" prodotti confrontabili"+(bestPair.coverage<items.length?". *Totale dei soli prodotti con prezzo disponibile.":".")+"</div></div>";
       }
     }else if(bestMode==="max"){
       const tot=confrontabili.reduce((s,x)=>s+Number(x.migliore.prezzo)*(Number(x.item.quantita)||1),0);
-      summary.innerHTML="<div class='best-store'><div class='best-store-top'><div class='best-store-name'>💰 Migliori prezzi disponibili</div><div class='best-store-price'>"+fmtEuro(tot)+"</div></div><div class='best-store-meta'>"+confrontabili.length+" di "+items.length+" prodotti confrontabili. Ogni prodotto è assegnato al prezzo corrente più basso disponibile.</div></div>";
-    }else{
-      summary.innerHTML="<div class='best-result-note'><b>Modalità massimo 2 negozi pronta.</b><br>Verrà calcolata solo quando il database avrà copertura sufficiente per confrontare combinazioni complete di due punti vendita.</div>";
+      summary.innerHTML="<div class='best-store'><div class='best-store-top'><div class='best-store-name'>💰 Migliori prezzi disponibili</div><div class='best-store-price'>"+fmtEuro(tot)+(confrontabili.length<items.length?"*":"")+"</div></div><div class='best-store-meta'>"+confrontabili.length+" di "+items.length+" prodotti confrontabili. Ogni prodotto usa il prezzo più basso disponibile."+(confrontabili.length<items.length?" *Totale parziale.":"")+"</div></div>";
     }
   }
 
@@ -869,15 +882,15 @@ function interpretaPreferenzaLinea(linea){
   const low=raw.toLowerCase(); let prodotto=raw,regola="",negozio="";
   const i=low.indexOf(" sempre ");
   if(i>0){prodotto=raw.slice(0,i).trim();regola=raw.slice(i+8).trim()}
-  else {const m=raw.match(/^(.+?)\\s*[:\\-]\\s*(.+)$/);if(m){prodotto=m[1].trim();regola=m[2].trim()}}
-  const sm=regola.match(/\\b(?:della|del|da|di)\\s+(Ipercoop|Coop|Lidl|Ekom|Gigante|Il Gigante)\\b/i);
+  else {const m=raw.match(/^(.+?)\s*[:\-]\s*(.+)$/);if(m){prodotto=m[1].trim();regola=m[2].trim()}}
+  const sm=regola.match(/\b(?:della|del|da|di)\s+(Ipercoop|Coop|Lidl|Ekom|Gigante|Il Gigante)\b/i);
   if(sm)negozio=sm[1];
   return {id:"pref_"+Date.now()+"_"+Math.random().toString(36).slice(2,8),testo:raw,prodotto:prodotto||raw,regola:regola||raw,negozio,livello:"obbligatoria"};
 }
 function salvaPreferenzeAcquisto(){
   const ta=document.getElementById("purchase-preferences-text");if(!ta)return;
   const vecchie=caricaPreferenzeAcquisto(),livelli=Object.fromEntries(vecchie.map(x=>[x.testo,x.livello]));
-  const prefs=ta.value.split(/\\n+/).map(x=>x.trim()).filter(Boolean).map(interpretaPreferenzaLinea).filter(Boolean);
+  const prefs=ta.value.split(/\n+/).map(x=>x.trim()).filter(Boolean).map(interpretaPreferenzaLinea).filter(Boolean);
   prefs.forEach(x=>{if(livelli[x.testo])x.livello=livelli[x.testo]});
   salvaPreferenzeAcquistoStorage(prefs);renderPreferenzeAcquisto();toast("Preferenze salvate.");
 }
@@ -893,7 +906,7 @@ function aggiornaLivelloPreferenza(id,livello){
 }
 function renderPreferenzeAcquisto(){
   const ta=document.getElementById("purchase-preferences-text"),host=document.getElementById("purchase-preferences-list");if(!ta||!host)return;
-  const prefs=caricaPreferenzeAcquisto();ta.value=prefs.map(x=>x.testo).join("\\n");
+  const prefs=caricaPreferenzeAcquisto();ta.value=prefs.map(x=>x.testo).join("\n");
   if(!prefs.length){host.innerHTML="<div class='pref-empty'>Nessuna preferenza salvata.</div>";return}
   host.innerHTML="";
   prefs.forEach(p=>{
