@@ -1,0 +1,110 @@
+{
+  "requestId": "TEST-1",
+  "generatedAt": "2026-09-13T22:14:06.158Z",
+  "engine": "playwright-browser-v1",
+  "items": [
+    {
+      "nome": "Latte",
+      "quantita": 1,
+      "unita": "pz"
+    },
+    {
+      "nome": "Spaghetti",
+      "quantita": 1,
+      "unita": "pz"
+    }
+  ],
+  "prices": [],
+  "diagnostics": [
+    {
+      "storeId": "gigante_rivalta",
+      "official": [
+        {
+          "url": "https://ilgigante.net/volantini/",
+          "ok": true,
+          "error": null
+        },
+        {
+          "url": "https://ilgigante.net/cerca-punto-vendita/",
+          "ok": true,
+          "error": null
+        }
+      ]
+    },
+    {
+      "storeId": "ipercoop_collegno",
+      "official": [
+        {
+          "url": "https://www.novacoop.it/",
+          "ok": true,
+          "error": null
+        },
+        {
+          "url": "https://www.novacoop.it/punti-vendita/coop-collegno",
+          "ok": true,
+          "error": null
+        }
+      ]
+    },
+    {
+      "storeId": "ipercoop_beinasco",
+      "official": [
+        {
+          "url": "https://www.novacoop.it/",
+          "ok": true,
+          "error": null
+        },
+        {
+          "url": "https://www.novacoop.it/news-eventi/news/ipercoop-beinasco-rinnovato",
+          "ok": true,
+          "error": null
+        }
+      ]
+    },
+    {
+      "storeId": "lidl_beinasco",
+      "official": [
+        {
+          "url": "https://www.lidl.it/s/it-IT/ricerca-negozio/beinasco-to/strada-torino-25/",
+          "ok": true,
+          "error": null
+        },
+        {
+          "url": "https://www.lidl.it/c/volantino-lidl/s10018048",
+          "ok": true,
+          "error": null
+        }
+      ]
+    },
+    {
+      "storeId": "lidl_rivoli",
+      "official": [
+        {
+          "url": "https://www.lidl.it/s/it-IT/ricerca-negozio/rivoli-to/corso-susa-260a/",
+          "ok": true,
+          "error": null
+        },
+        {
+          "url": "https://www.lidl.it/c/volantino-lidl/s10018048",
+          "ok": true,
+          "error": null
+        }
+      ]
+    },
+    {
+      "storeId": "ekom_bruino",
+      "official": [
+        {
+          "url": "https://www.ekomdiscount.it/punti-vendita",
+          "ok": true,
+          "error": null
+        },
+        {
+          "url": "https://www.ekomdiscount.it/volantini",
+          "ok": true,
+          "error": null
+        }
+      ]
+    }
+  ]
+}
