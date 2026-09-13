@@ -405,6 +405,14 @@
   .best-source{display:inline-flex;align-items:center;gap:4px;font-size:.66rem;padding:3px 6px;border-radius:999px;background:var(--ui-bg2);border:1px solid var(--ui-border);margin-top:5px}
   .best-empty{padding:16px;border:1px dashed var(--ui-border);border-radius:14px;text-align:center;color:var(--ui-text3);font-size:.84rem}
   .best-legend{font-size:.72rem;color:var(--ui-text3);line-height:1.45;margin-top:10px}
+  .best-loading{padding:16px;text-align:center;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-card);color:var(--ui-text2)}
+  .best-refresh{width:100%;margin:0 0 12px;border-radius:12px}
+  .best-source-status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 0 12px}
+  .source-pill{padding:7px 8px;border:1px solid var(--ui-border);border-radius:10px;background:var(--ui-card);font-size:.68rem;color:var(--ui-text2)}
+  .source-pill b{display:block;color:var(--ui-text);font-size:.72rem;margin-bottom:2px}
+  .source-pill.ok{border-color:#55a86a55}
+  .source-pill.partial{border-color:#c89a3555}
+  .source-pill.err{border-color:#b84c3a55}
 </style>
 
 </head>
@@ -502,16 +510,19 @@
         </div>
 
         <div class="best-result-note">
-          Il confronto usa solo <b>prezzi correnti disponibili</b>. Offerte e prezzi shop vengono distinti dalle stime.
-          Se un prezzo non è disponibile, l'app non inventa un valore e lo segnala come non confrontabile.
+          Il confronto interroga in un'unica richiesta <b>Open Prices, CosìComodo/Il Gigante, CoopShop, Lidl ed Ekom</b>.
+          Ogni risultato conserva fonte, data e livello di affidabilità. I prezzi non verificabili sul singolo punto vendita
+          vengono mostrati come indicativi e non spacciati per certi.
         </div>
+        <div id="best-source-status" class="best-source-status"></div>
+        <button type="button" class="secondary best-refresh" onclick="aggiornaPrezziLive(true)">↻ Aggiorna prezzi adesso</button>
 
         <div id="best-summary"></div>
         <div id="best-products"></div>
 
         <p class="best-legend">
-          Fonti previste: CoopShop, CosìComodo, offerte ufficiali Lidl/Ekom/Coop/Gigante e altre fonti correnti verificabili.
-          Le preferenze di acquisto vengono applicate prima del confronto.
+          Fonti attive nel motore: Open Prices/Open Food Facts, CosìComodo/Il Gigante, CoopShop, Lidl ed Ekom.
+          Le preferenze di acquisto vengono applicate prima del confronto; le fonti parziali sono sempre segnalate.
         </p>
       </section>
 
@@ -597,7 +608,7 @@
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbwlUOrHMLFX164q7dtYaGWkC8JTjZvK_44c7M9JjGU3v_kvRwebjifqNCu6T3dzTKY3/exec";
-const APP_VERSION = "v1.2";
+const APP_VERSION = "v1.4";
 const PANTRY_QUEUE_KEY = "dispensa_ricevuti_v61";
 const PIN_STORAGE = "lista_spesa_app_pin_v1";
 const TRUST_STORAGE = "lista_spesa_device_trusted_v1";
@@ -740,19 +751,54 @@ function prezziProdotto(nome){
 function fmtEuro(v){return Number.isFinite(Number(v))?Number(v).toLocaleString("it-IT",{style:"currency",currency:"EUR"}):"—"}
 function sourceLabel(p){
   if(!p)return "";
-  if(p.offerta)return "Offerta";
-  if(p.tipoFonte==="shop")return "Prezzo shop";
-  if(p.tipoFonte==="volantino")return "Volantino";
-  return "Prezzo verificato";
+  const base=p.offerta?"Offerta":p.tipoFonte==="shop"?"Prezzo shop":p.tipoFonte==="volantino"?"Volantino":"Prezzo";
+  return base+" · "+(p.fonte||"fonte verificata");
+}
+function confidenceLabel(p){
+  if(!p)return "";
+  const c=p.confidence||"low";
+  return c==="high"?"alta":c==="medium"?"media":"bassa";
 }
 function impostaBestMode(mode){
   bestMode=["one","two","max"].includes(mode)?mode:"one";
   ["one","two","max"].forEach(x=>document.getElementById("best-mode-"+x)?.classList.toggle("active",x===bestMode));
   renderSpesaMigliore();
 }
-function apriSpesaMigliore(){
+async function apriSpesaMigliore(){
   mostraVista("best");
   renderSpesaMigliore();
+  await aggiornaPrezziLive(false);
+}
+async function aggiornaPrezziLive(force=false){
+  const host=document.getElementById("best-summary");
+  const items=itemsLista();
+  if(!items.length)return;
+  if(host)host.innerHTML="<div class='best-loading'>Cerco i prezzi correnti disponibili…</div>";
+  try{
+    const prefs=caricaPreferenzeAcquisto();
+    const r=await api("getBestPricesLive",{
+      lista:activeListId,
+      items:items.map(x=>({nome:x.nome,quantita:x.quantita,unita:x.unita,categoria:x.categoria})),
+      preferences:prefs,
+      force:!!force
+    });
+    if(Array.isArray(r.prezzi))salvaPriceCache(r.prezzi);
+    renderSourceStatus(r.sourceStatus||[]);
+    renderSpesaMigliore();
+    if(r.warning)toast(r.warning);
+  }catch(e){
+    renderSourceStatus([]);
+    renderSpesaMigliore();
+    toast("Ricerca prezzi non disponibile: verifica il backend Apps Script v1.4.");
+  }
+}
+function renderSourceStatus(rows){
+  const h=document.getElementById("best-source-status");if(!h)return;
+  if(!Array.isArray(rows)||!rows.length){h.innerHTML="";return}
+  h.innerHTML=rows.map(x=>{
+    const cls=x.ok?(x.partial?"partial":"ok"):"err";
+    return "<div class='source-pill "+cls+"'><b>"+esc(x.nome)+"</b>"+esc(x.messaggio||"")+"</div>";
+  }).join("");
 }
 function renderSpesaMigliore(){
   const summary=document.getElementById("best-summary"),host=document.getElementById("best-products");
@@ -809,7 +855,7 @@ function renderSpesaMigliore(){
       const p=x.migliore;
       return "<div class='best-product-row'><div><div class='best-product-name'>"+esc(x.item.nome)+"</div>"+
         (pref?"<div class='best-product-pref'>Preferenza: "+esc(pref.regola)+" · "+esc(pref.livello)+"</div>":"")+
-        (p?"<span class='best-source'>"+esc(sourceLabel(p))+"</span>":"")+
+        (p?"<span class='best-source'>"+esc(sourceLabel(p))+" · affidabilità "+esc(confidenceLabel(p))+"</span>":"")+
         "</div><div><div class='best-product-price'>"+(p?fmtEuro(p.prezzo):"—")+"</div>"+
         "<div class='best-product-store'>"+(p?esc((PRICE_STORES.find(s=>s.id===p.storeId)||{}).nome||p.storeId):"Prezzo non disponibile")+"</div></div></div>";
     }).join("")+
