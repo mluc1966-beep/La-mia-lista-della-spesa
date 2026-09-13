@@ -382,6 +382,29 @@
   .pref-chip{display:inline-block;font-size:.68rem;padding:3px 6px;border-radius:999px;background:var(--ui-bg2);border:1px solid var(--ui-border);color:var(--ui-text2);margin-top:6px}
   .pref-level{font-size:.72rem;padding:6px 7px;border:1px solid var(--ui-border);border-radius:9px;background:var(--ui-card);color:var(--ui-text)}
   .pref-empty{font-size:.8rem;color:var(--ui-text3);padding:8px 2px}
+
+  /* v1.2 — Spesa migliore */
+  .best-btn{width:100%;margin:10px 0 4px;min-height:48px;border-radius:14px;font-weight:800;background:linear-gradient(135deg,var(--ui-accent),var(--ui-accent2));color:#fff}
+  .best-head{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
+  .best-head h2{margin:0;font-family:"Playfair Display",Georgia,serif;color:var(--ui-accent2)}
+  .best-mode{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:4px;background:var(--ui-bg2);border:1px solid var(--ui-border);border-radius:14px;margin-bottom:12px}
+  .best-mode button{background:transparent;color:var(--ui-text2);border:none;border-radius:10px;padding:9px 6px;font-size:.75rem;font-weight:800}
+  .best-mode button.active{background:var(--ui-card);color:var(--ui-accent2);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .best-store{border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-card);padding:11px 12px;margin-bottom:8px}
+  .best-store-top{display:flex;align-items:center;gap:8px}
+  .best-store-name{font-weight:800;flex:1}
+  .best-store-price{font-weight:900;color:var(--ui-accent2)}
+  .best-store-meta{font-size:.74rem;color:var(--ui-text3);margin-top:4px}
+  .best-result-note{padding:11px 12px;border-radius:12px;background:var(--ui-bg2);border:1px solid var(--ui-border);font-size:.8rem;line-height:1.45;color:var(--ui-text2);margin-bottom:12px}
+  .best-product-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px 0;border-bottom:1px solid var(--ui-border)}
+  .best-product-row:last-child{border-bottom:none}
+  .best-product-name{font-weight:800}
+  .best-product-pref{font-size:.73rem;color:var(--ui-text3);margin-top:2px}
+  .best-product-price{font-weight:800;text-align:right}
+  .best-product-store{font-size:.7rem;color:var(--ui-text3);text-align:right}
+  .best-source{display:inline-flex;align-items:center;gap:4px;font-size:.66rem;padding:3px 6px;border-radius:999px;background:var(--ui-bg2);border:1px solid var(--ui-border);margin-top:5px}
+  .best-empty{padding:16px;border:1px dashed var(--ui-border);border-radius:14px;text-align:center;color:var(--ui-text3);font-size:.84rem}
+  .best-legend{font-size:.72rem;color:var(--ui-text3);line-height:1.45;margin-top:10px}
 </style>
 
 </head>
@@ -453,12 +476,43 @@
 
         <div id="items-container"></div>
 
+        <button type="button" class="best-btn" onclick="apriSpesaMigliore()">💰 Spesa migliore</button>
+
         <div id="bought-container" class="store-only"></div>
 
         <details class="purchases-box store-only" id="purchases-box" ontoggle="if(this.open) caricaPendingDispensa()">
           <summary><span>🧺 Acquisti da trasferire</span><span><span id="purchases-count">0</span><span class="purchases-arrow">⌄</span></span></summary>
           <div class="purchases-body"><div class="test-transfer-note">📥 L'acquisto viene rimosso da questa coda soltanto dopo che è stato registrato in “Prodotti da sistemare” della Dispensa.</div><a href="https://mluc1966-beep.github.io/dispensa/index.html" target="_blank" rel="noopener" style="display:block;text-align:center;margin:0 0 9px;color:var(--ui-accent);font-size:.78rem;font-weight:700">Apri “Prodotti da sistemare” ↗</a><div id="purchases-body"><p class="add-hint">Nessun acquisto da trasferire.</p></div></div>
         </details>
+      </section>
+
+      <section id="view-best" class="app-view">
+        <div class="best-head">
+          <button class="back-btn" type="button" onclick="mostraVista('list')" aria-label="Indietro">‹</button>
+          <div>
+            <div class="settings-kicker">CONFRONTO PREZZI</div>
+            <h2>Spesa migliore</h2>
+          </div>
+        </div>
+
+        <div class="best-mode" role="group" aria-label="Modalità confronto">
+          <button type="button" id="best-mode-one" class="active" onclick="impostaBestMode('one')">1 negozio</button>
+          <button type="button" id="best-mode-two" onclick="impostaBestMode('two')">Max 2 negozi</button>
+          <button type="button" id="best-mode-max" onclick="impostaBestMode('max')">Max risparmio</button>
+        </div>
+
+        <div class="best-result-note">
+          Il confronto usa solo <b>prezzi correnti disponibili</b>. Offerte e prezzi shop vengono distinti dalle stime.
+          Se un prezzo non è disponibile, l'app non inventa un valore e lo segnala come non confrontabile.
+        </div>
+
+        <div id="best-summary"></div>
+        <div id="best-products"></div>
+
+        <p class="best-legend">
+          Fonti previste: CoopShop, CosìComodo, offerte ufficiali Lidl/Ekom/Coop/Gigante e altre fonti correnti verificabili.
+          Le preferenze di acquisto vengono applicate prima del confronto.
+        </p>
       </section>
 
       <section id="view-settings" class="app-view">
@@ -543,13 +597,14 @@
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbwlUOrHMLFX164q7dtYaGWkC8JTjZvK_44c7M9JjGU3v_kvRwebjifqNCu6T3dzTKY3/exec";
-const APP_VERSION = "v1.1";
+const APP_VERSION = "v1.2";
 const PANTRY_QUEUE_KEY = "dispensa_ricevuti_v61";
 const PIN_STORAGE = "lista_spesa_app_pin_v1";
 const TRUST_STORAGE = "lista_spesa_device_trusted_v1";
 const SETTINGS_STORAGE = "app_settings";
 const CATEGORY_MEMORY_KEY = "lista_spesa_category_memory_v2";
 const PURCHASE_PREFS_KEY = "lista_spesa_purchase_preferences_v1";
+const PRICE_CACHE_KEY = "lista_spesa_price_cache_v1";
 const POLL_MS = 4000;
 const UNITA = ["pz","kg","g","L","ml"];
 
@@ -625,6 +680,16 @@ const TEMI=[
 {id:"sepia",nome:"Sepia",c:["#f5f0e8","#8a7a5a","#6b5c3e","#5e7a60"]},{id:"salvia",nome:"Salvia",c:["#eef3ee","#4a7c59","#346045","#7aaa8a"]},{id:"nordic",nome:"Nordic",c:["#eef2f5","#3a6b9a","#2a5278","#5b9ec9"]},{id:"terracotta",nome:"Terracotta",c:["#f7f0eb","#b85c38","#8f3e22","#c4922a"]},{id:"rosa",nome:"Rosa",c:["#fdf0f0","#b85c7a","#8f3a58","#7a9870"]},{id:"lavanda",nome:"Lavanda",c:["#f3f0fa","#7a5cb8","#5a3a98","#5e8a70"]},{id:"pesca",nome:"Pesca",c:["#fdf4ec","#d4804a","#a85c28","#6a9060"]},{id:"menta",nome:"Menta",c:["#fdfaf0","#5a9060","#3a7040","#c8d89a"]},{id:"cielo",nome:"Cielo",c:["#f0f6fc","#4a8ab8","#2a6a98","#5a9870"]},{id:"acqua",nome:"Acqua",c:["#e8f8fc","#0a8ab0","#006a90","#40c0e0"]},{id:"perla",nome:"Perla",c:["#f4f4f6","#6a6a8a","#4a4a6a","#4a8a6a"]},{id:"cipria",nome:"Rosa cipria",c:["#fbf3f5","#b76e79","#8f5360","#9aa77a"]},{id:"sabbia",nome:"Sabbia",c:["#f7f2e8","#b28b57","#8a693e","#7f9a73"]},{id:"azzurroPolvere",nome:"Azzurro polvere",c:["#f0f5f7","#6f96a8","#527688","#86a984"]},{id:"limone",nome:"Limone",c:["#fffbe9","#c3a62f","#917b20","#7ca36a"]},{id:"albicocca",nome:"Albicocca",c:["#fff4e8","#d98b55","#ad6538","#83a36d"]},{id:"glicine",nome:"Glicine",c:["#f6f2fb","#8e78b7","#6c5596","#7f9e82"]},{id:"magnolia",nome:"Magnolia",c:["#fbf8f3","#9c8068","#765f4d","#8aa07b"]},{id:"eucalipto",nome:"Eucalipto",c:["#f0f5f2","#6f917f","#4f6f5e","#9ab58c"]},{id:"foresta",nome:"Foresta",c:["#252e28","#5aaa70","#3a8850","#80c890"]},{id:"bluNotte",nome:"Blu Notte",c:["#28303e","#4a7ad4","#2a5ab4","#60d0a0"]},{id:"bordeaux",nome:"Bordeaux",c:["#332028","#c05070","#a03050","#d4a060"]},{id:"notte",nome:"Notte",c:["#2a2d35","#d4a96a","#c4854a","#6aab8a"]}
 ];
 
+
+const PRICE_STORES = [
+  {id:"ekom_bruino",nome:"Ekom Bruino",fonte:"Offerte / shop se disponibile"},
+  {id:"gigante_rivalta",nome:"Il Gigante Rivalta",fonte:"CosìComodo / offerte"},
+  {id:"lidl_beinasco",nome:"Lidl Beinasco",fonte:"Offerte Lidl"},
+  {id:"lidl_rivoli",nome:"Lidl Rivoli · Corso Susa 260",fonte:"Offerte Lidl"},
+  {id:"ipercoop_collegno",nome:"Ipercoop Collegno · Via Enrico Fermi",fonte:"CoopShop / offerte"},
+  {id:"ipercoop_beinasco",nome:"Ipercoop Beinasco · Le Fornaci",fonte:"CoopShop / offerte"}
+];
+
 const WINDOWS_LIST_COLORS=["#E74856","#FF8C00","#FFB900","#7FBA00","#16C60C","#00CC6A","#00B7C3","#0099BC","#0078D7","#0063B1","#5C2D91","#8764B8","#B146C2","#E3008C","#BF0077","#C239B3","#8E8CD8","#486860","#498205","#107C10","#038387","#008272","#004E8C","#00188F"];
 
 let pin = "";
@@ -646,6 +711,110 @@ function caricaMemoriaCategorie(){try{return JSON.parse(localStorage.getItem(CAT
 function imparaCategoria(nome,categoria){const k=normalizzaNomeProdotto(nome);if(!k)return;const m=caricaMemoriaCategorie();m[k]=categoria;localStorage.setItem(CATEGORY_MEMORY_KEY,JSON.stringify(m))}
 function categoriaAutomatica(nome){const k=normalizzaNomeProdotto(nome),m=caricaMemoriaCategorie();if(m[k]&&CATEGORIE.some(c=>c.id===m[k]))return m[k];for(const [cat,parole] of Object.entries(CATEGORY_RULES)){if(parole.some(p=>{const q=normalizzaNomeProdotto(p);return k===q||k.includes(q)||q.includes(k)}))return cat}return "Altro"}
 function categoriaObj(cat){return CATEGORIE.find(c=>c.id===cat)||CATEGORIE.find(c=>c.id==="Altro")}
+
+let bestMode="one";
+
+function caricaPriceCache(){
+  try{
+    const v=JSON.parse(localStorage.getItem(PRICE_CACHE_KEY)||"[]");
+    return Array.isArray(v)?v:[];
+  }catch(e){return[]}
+}
+function salvaPriceCache(v){localStorage.setItem(PRICE_CACHE_KEY,JSON.stringify(v||[]))}
+function prefPerProdotto(nome){
+  const k=normalizzaNomeProdotto(nome);
+  return caricaPreferenzeAcquisto().find(p=>normalizzaNomeProdotto(p.prodotto)===k) || null;
+}
+function prezziProdotto(nome){
+  const k=normalizzaNomeProdotto(nome),ora=Date.now();
+  return caricaPriceCache().filter(p=>{
+    const pk=normalizzaNomeProdotto(p.nomeLista||p.prodotto||"");
+    if(pk!==k)return false;
+    if(p.validoFino){
+      const t=Date.parse(p.validoFino);
+      if(Number.isFinite(t)&&t<ora)return false;
+    }
+    return Number.isFinite(Number(p.prezzo));
+  });
+}
+function fmtEuro(v){return Number.isFinite(Number(v))?Number(v).toLocaleString("it-IT",{style:"currency",currency:"EUR"}):"—"}
+function sourceLabel(p){
+  if(!p)return "";
+  if(p.offerta)return "Offerta";
+  if(p.tipoFonte==="shop")return "Prezzo shop";
+  if(p.tipoFonte==="volantino")return "Volantino";
+  return "Prezzo verificato";
+}
+function impostaBestMode(mode){
+  bestMode=["one","two","max"].includes(mode)?mode:"one";
+  ["one","two","max"].forEach(x=>document.getElementById("best-mode-"+x)?.classList.toggle("active",x===bestMode));
+  renderSpesaMigliore();
+}
+function apriSpesaMigliore(){
+  mostraVista("best");
+  renderSpesaMigliore();
+}
+function renderSpesaMigliore(){
+  const summary=document.getElementById("best-summary"),host=document.getElementById("best-products");
+  if(!summary||!host)return;
+  const items=itemsLista();
+  if(!items.length){
+    summary.innerHTML="";host.innerHTML="<div class='best-empty'>La lista è vuota.</div>";return;
+  }
+
+  const dettagli=items.map(item=>{
+    const pref=prefPerProdotto(item.nome);
+    const prezzi=prezziProdotto(item.nome).sort((a,b)=>Number(a.prezzo)-Number(b.prezzo));
+    return {item,pref,prezzi,migliore:prezzi[0]||null};
+  });
+
+  const confrontabili=dettagli.filter(x=>x.migliore);
+  const nonConfrontabili=dettagli.length-confrontabili.length;
+
+  if(!confrontabili.length){
+    summary.innerHTML="<div class='best-empty'><b>Nessun prezzo corrente disponibile per i prodotti di questa lista.</b><br><br>La funzione è attiva, ma il database prezzi non contiene ancora dati correnti per questa spesa.</div>";
+  }else{
+    const perStore={};
+    dettagli.forEach(x=>{
+      x.prezzi.forEach(p=>{
+        if(!perStore[p.storeId])perStore[p.storeId]={tot:0,n:0};
+        perStore[p.storeId].tot+=Number(p.prezzo)*(Number(x.item.quantita)||1);
+        perStore[p.storeId].n++;
+      });
+    });
+    const cards=PRICE_STORES.map(s=>{
+      const d=perStore[s.id];
+      return {s,d};
+    }).filter(x=>x.d).sort((a,b)=>a.d.tot-b.d.tot);
+
+    if(bestMode==="one"){
+      const validi=cards.filter(x=>x.d.n===items.length);
+      if(validi.length){
+        const win=validi[0];
+        summary.innerHTML="<div class='best-store'><div class='best-store-top'><div class='best-store-name'>🏆 "+esc(win.s.nome)+"</div><div class='best-store-price'>"+fmtEuro(win.d.tot)+"</div></div><div class='best-store-meta'>Tutti i "+items.length+" prodotti hanno un prezzo corrente disponibile in questo negozio.</div></div>";
+      }else{
+        summary.innerHTML="<div class='best-result-note'><b>Nessun singolo negozio è confrontabile sull'intera lista.</b><br>Ci sono "+nonConfrontabili+" prodotti senza prezzo corrente sufficiente oppure negozi con copertura parziale.</div>";
+      }
+    }else if(bestMode==="max"){
+      const tot=confrontabili.reduce((s,x)=>s+Number(x.migliore.prezzo)*(Number(x.item.quantita)||1),0);
+      summary.innerHTML="<div class='best-store'><div class='best-store-top'><div class='best-store-name'>💰 Migliori prezzi disponibili</div><div class='best-store-price'>"+fmtEuro(tot)+"</div></div><div class='best-store-meta'>"+confrontabili.length+" di "+items.length+" prodotti confrontabili. Ogni prodotto è assegnato al prezzo corrente più basso disponibile.</div></div>";
+    }else{
+      summary.innerHTML="<div class='best-result-note'><b>Modalità massimo 2 negozi pronta.</b><br>Verrà calcolata solo quando il database avrà copertura sufficiente per confrontare combinazioni complete di due punti vendita.</div>";
+    }
+  }
+
+  host.innerHTML="<div class='best-store'>"+
+    dettagli.map(x=>{
+      const pref=x.pref;
+      const p=x.migliore;
+      return "<div class='best-product-row'><div><div class='best-product-name'>"+esc(x.item.nome)+"</div>"+
+        (pref?"<div class='best-product-pref'>Preferenza: "+esc(pref.regola)+" · "+esc(pref.livello)+"</div>":"")+
+        (p?"<span class='best-source'>"+esc(sourceLabel(p))+"</span>":"")+
+        "</div><div><div class='best-product-price'>"+(p?fmtEuro(p.prezzo):"—")+"</div>"+
+        "<div class='best-product-store'>"+(p?esc((PRICE_STORES.find(s=>s.id===p.storeId)||{}).nome||p.storeId):"Prezzo non disponibile")+"</div></div></div>";
+    }).join("")+
+  "</div>";
+}
 
 function caricaPreferenzeAcquisto(){try{const v=JSON.parse(localStorage.getItem(PURCHASE_PREFS_KEY)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}}
 function salvaPreferenzeAcquistoStorage(v){localStorage.setItem(PURCHASE_PREFS_KEY,JSON.stringify(v))}
@@ -710,7 +879,7 @@ function renderColoriListe(){const h=document.getElementById("color-liste-contai
 function ripristinaColoriListe(){LISTE.forEach(l=>impostazioni.liste[l.id]=DEFAULT_COLORS.liste[l.id]);salvaImpostazioni();renderColoriListe();disegnaTessere()}
 
 function vistaAttiva(){const e=document.querySelector(".app-view.active");return e?e.id.replace("view-",""):"home"}
-function mostraVista(which){if(which==="settings")vistaPrimaImpostazioni=vistaAttiva()==="settings"?"home":vistaAttiva();document.querySelectorAll(".app-view").forEach(v=>v.classList.remove("active"));document.getElementById("view-"+which)?.classList.add("active");if(which==="home")disegnaTessere();if(which==="list"){const box=document.getElementById("purchases-box");if(box)box.open=false;impostaModalitaLista(listMode,false)}if(which==="settings"){document.getElementById("chiedi-pin-sempre").checked=!!impostazioni.chiediPinSempre;renderTemi();renderColoriListe();renderPreferenzeAcquisto();document.getElementById("settings-version").textContent=APP_VERSION;aggiornaMetaUI()}}
+function mostraVista(which){if(which==="settings")vistaPrimaImpostazioni=vistaAttiva()==="settings"?"home":vistaAttiva();document.querySelectorAll(".app-view").forEach(v=>v.classList.remove("active"));document.getElementById("view-"+which)?.classList.add("active");if(which==="home")disegnaTessere();if(which==="list"){const box=document.getElementById("purchases-box");if(box)box.open=false;impostaModalitaLista(listMode,false)}if(which==="best")renderSpesaMigliore()if(which==="settings"){document.getElementById("chiedi-pin-sempre").checked=!!impostazioni.chiediPinSempre;renderTemi();renderColoriListe();renderPreferenzeAcquisto();document.getElementById("settings-version").textContent=APP_VERSION;aggiornaMetaUI()}}
 function tornaDaImpostazioni(){mostraVista(vistaPrimaImpostazioni==="settings"?"home":vistaPrimaImpostazioni)}
 function nuovaListaNonAncoraAttiva(){alert("La creazione di nuove liste non è ancora attiva. Le quattro liste attuali restano quelle collegate ad Alexa.")}
 
